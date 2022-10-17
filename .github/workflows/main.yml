@@ -21,8 +21,8 @@ jobs:
       - run: flutter build apk --multidex
       - run: flutter build windows
       
-      - name: Extract mpv files
-        run: 7z x mpv_paste_in_build.7z
+      # - name: Extract mpv files
+      #   run: 7z x mpv_paste_in_build.7z
     
       - name: Archive Release
         uses: thedoctor0/zip-release@master
