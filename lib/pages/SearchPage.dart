@@ -221,12 +221,14 @@ class _SearchPageState extends State<SearchPage>
     var size = MediaQuery.of(context).size;
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            return _buildMainBody(size);
-          },
+      child: SafeArea(
+        child: Scaffold(
+          resizeToAvoidBottomInset: false,
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              return _buildMainBody(size);
+            },
+          ),
         ),
       ),
     );
