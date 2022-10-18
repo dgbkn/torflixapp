@@ -46,6 +46,7 @@ dependencies:
   path_provider: ^2.0.11
   day_night_switcher: ^0.2.0+1
   macos_ui: ^1.7.5
+  google_fonts: ^3.0.1
   hive_flutter: ^1.1.0
   url_launcher: ^6.1.5
   dart_vlc:
