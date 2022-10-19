@@ -248,7 +248,7 @@ class _SearchPageState extends State<SearchPage>
           //     height: 200,
           //   ),
           // ),
-          widget.switchTheme.isNullOrBlank ? Row(
+          widget.switchTheme != null ? Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               widget.switchTheme,
