@@ -127,7 +127,7 @@ class _AddMagnetState extends State<AddMagnet> {
 
     var progdata = progDataUnformated.substring(1);
     progdata = progdata.substring(1);
-    progdata = progdata.substring(0, 2);
+    progdata = progdata.substring(0, progdata.length()-1);
 
     Map finalProg = jsonDecode(progdata);
 
@@ -142,6 +142,7 @@ class _AddMagnetState extends State<AddMagnet> {
           () => changePageTo(context, SearchPage(), true));
     } else {
       var prog = finalProg["progress"];
+
       setState(() {
         status = "Progress : $prog";
       });
@@ -168,6 +169,7 @@ class _AddMagnetState extends State<AddMagnet> {
 
   @override
   void initState() {
+    addMagnet(widget.magnet);
     super.initState();
   }
 
