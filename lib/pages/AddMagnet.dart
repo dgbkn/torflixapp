@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:async/async.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -138,7 +139,7 @@ class _AddMagnetState extends State<AddMagnet> {
     } else {}
   }
 
-  void loadProgress(Timer timer, progurl) async {
+  void loadProgress(progurl) async {
     var response = await get(Uri.parse(progurl));
     var progDataUnformated = response.body;
 
@@ -152,34 +153,31 @@ class _AddMagnetState extends State<AddMagnet> {
 
     if ((finalProg.containsKey("warnings") && finalProg["warnings"] != '[]') ||
         finalProg["download_rate"] == 0) {
-      timer.cancel();
       setState(() {
         status = "Slow Torrent Detected...";
       });
 
-      Get.snackbar("Error:", "Slow Torrent Detected select other with high seeds..",
+      Get.snackbar(
+          "Error:", "Slow Torrent Detected select other with high seeds..",
           backgroundColor: Colors.redAccent, colorText: Colors.white);
 
       Timer(Duration(seconds: 3),
           () => changePageTo(context, SearchPage(), true));
     } else {
+      print(finalProg);
       var prog = finalProg.containsKey("progress") ? finalProg["progress"] : 0;
 
       setState(() {
         status = "Progress : $prog";
       });
 
-      try {
-        if (int.parse(prog) >= 100) {
-           print(prog);
-          changePageTo(context, AllFiles(), true);
-          timer.cancel();
-
-
-          // changePageTo(context, toGo, replace)
-        }
-      } catch (ex) {
-        print(ex);
+      if (prog >= 98) {
+        changePageTo(context, AllFiles(), true);
+        // changePageTo(context, toGo, replace)
+      } else {
+        Timer(Duration(seconds: 1), () {
+          loadProgress(progurl);
+        });
       }
     }
   }
@@ -194,8 +192,7 @@ class _AddMagnetState extends State<AddMagnet> {
       var progurl = d["torrents"][0]["progress_url"];
       print(progurl);
 
-      Timer.periodic(
-          Duration(seconds: 1), (timer) => loadProgress(timer, progurl));
+      loadProgress(progurl);
     }
   }
 
