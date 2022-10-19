@@ -6,4 +6,4 @@ jobs:
     steps:
       - checkout
       - run: flutter doctor
-      - run: flutter -v build apk -- multidex
+      - run: flutter -v build apk 
