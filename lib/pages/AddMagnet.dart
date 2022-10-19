@@ -51,7 +51,7 @@ class _AddMagnetState extends State<AddMagnet> {
 
     if (connected) {
       var allTorrentsAndFiles = await get(Uri.parse(
-          "https://www.seedr.cc/api/folder?access_token=${boxLogin.get("token")}"));
+          "https://www.seedr.cc/api/folder?access_token=${boxLogin.get('token')}"));
 
       if (allTorrentsAndFiles.statusCode == 200) {
         var d = jsonDecode(allTorrentsAndFiles.body);
@@ -60,6 +60,10 @@ class _AddMagnetState extends State<AddMagnet> {
         d["folders"].forEach((t) => deleteSingle(t["id"], "folder"));
 
       } else {
+
+
+        print(allTorrentsAndFiles.body);
+
         var details = {
           "grant_type": "password",
           "client_id": "seedr_chrome",
