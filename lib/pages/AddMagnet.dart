@@ -145,6 +145,10 @@ class _AddMagnetState extends State<AddMagnet> {
       setState(() {
         status = "Progress : $prog";
       });
+
+      if(int.parse(prog) > 98){
+        // changePageTo(context, toGo, replace)
+      }
     }
   }
 
