@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
+import 'package:seedr_app/pages/AllFiles.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
 import 'package:seedr_app/utils.dart';
 
@@ -170,7 +171,10 @@ class _AddMagnetState extends State<AddMagnet> {
 
       try {
         if (int.parse(prog) >= 100) {
+           print(prog);
+          changePageTo(context, AllFiles(), true);
           timer.cancel();
+
 
           // changePageTo(context, toGo, replace)
         }

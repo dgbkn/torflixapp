@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
+import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
@@ -182,8 +184,7 @@ class _AllFilesState extends State<AllFiles> {
                             child: Text("Download")),
                       ]),
 
-             
-                      isVideo && !Platform.isAndroid
+                      isVideo && Platform.isAndroid
                           ? Row(
                               children: [
                                 DropdownButton<String>(
@@ -231,17 +232,37 @@ class _AllFilesState extends State<AllFiles> {
                                       case "VLC":
                                         AndroidIntent intent = AndroidIntent(
                                           action: 'action_view',
-                                          data:"$uri"
-                                              'package:org.videolan.vlc',
-                                          arguments: {
-                                            'title': file["name"]
-                                          },
+                                          data: Uri.encodeFull(uri),
+                                          package: 'org.videolan.vlc',
+                                          arguments: {'title': file["name"]},
                                         );
                                         await intent.launch();
                                         break;
                                       case "MX Player Pro":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          data: Uri.encodeFull(uri),
+                                          package: 'com.mxtech.videoplayer.pro',
+                                        );
+                                        await intent.launch();
+                                        break;
                                       case "MX Player":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          data: Uri.encodeFull(uri),
+                                          package: 'com.mxtech.videoplayer.ad',
+                                        );
+                                        await intent.launch();
+                                        break;
                                       case "NPlayer":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          data: Uri.encodeFull(uri),
+                                          package:
+                                              'package:com.qinxiandiqi.nplayer',
+                                        );
+                                        await intent.launch();
+                                        break;
                                     }
                                   },
                                 ),
@@ -257,7 +278,42 @@ class _AllFilesState extends State<AllFiles> {
 
           setState(() {});
         }
-      } else {}
+      } else {
+          var details = {
+          "grant_type": "password",
+          "client_id": "seedr_chrome",
+          "type": "login",
+          "username": boxLogin.get("user"),
+          "password": boxLogin.get("pass")
+        };
+
+        final response = await post(
+          Uri.parse('https://www.seedr.cc/oauth_test/token.php'),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          encoding: Encoding.getByName('utf-8'),
+          body: details,
+        );
+
+        if (response.statusCode == 200) {
+          // If the server did return a 200 OK response,
+          // then parse the JSON.
+          var d = jsonDecode(response.body);
+          Get.snackbar("Login Success", "",
+              backgroundColor: Colors.greenAccent, colorText: Colors.white);
+          var token = d["access_token"];
+          boxLogin.put("token", token);
+          loadFiles();
+        } else {
+          Get.snackbar("Error:", "Login Expired",
+              backgroundColor: Colors.redAccent, colorText: Colors.white);
+          boxLogin.delete("user");
+          boxLogin.delete("pass");
+          boxLogin.delete("token");
+          SystemNavigator.pop();
+        }
+      }
     } else {}
   }
 
