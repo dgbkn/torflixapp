@@ -86,45 +86,51 @@ class _SearchPageState extends State<SearchPage>
         "query": qry,
         "type": "search",
       };
-
-      final responseSandr = await post(
-        Uri.parse('http://45.61.136.80:8080/search'),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        encoding: Encoding.getByName('utf-8'),
-        body: details,
-      );
-
-      var sandrs = jsonDecode(responseSandr.body);
       var one337 = jsonDecode(xData1337.body);
+
       one337 = one337["result"];
-      sandrs = sandrs["torrents"];
 
-      sandrs.forEach((s) {
-        var GB = s['size'].contains('GB') ? true : false;
+      try {
+        final responseSandr = await post(
+          Uri.parse('http://45.61.136.80:8080/search'),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          encoding: Encoding.getByName('utf-8'),
+          body: details,
+        );
 
-        var size;
+        var sandrs = jsonDecode(responseSandr.body);
+        sandrs = sandrs["torrents"];
 
-        // print(s["title"] + " "  + size.toString());
+        sandrs.forEach((s) {
+          var GB = s['size'].contains('GB') ? true : false;
 
-        try {
-          size = s['size'].substring(0, s['size'].length - 2);
-          size = double.parse(size);
-        } catch (ex) {
-          print(ex);
-          size = 0;
-        }
+          var size;
 
-        if (!GB || (GB && size <= 4.0)) {
-          torrentCardsall.add(renderTorrent(
-              s["title"],
-              'Seeds:' + s['seeds'] + ' | ' + s['source'] + ' | ' + s['size'],
-              () {
-                changePageTo(context, AddMagnet(magnet: s['magnet']), false);
-              }));
-        }
-      });
+          // print(s["title"] + " "  + size.toString());
+
+          try {
+            size = s['size'].substring(0, s['size'].length - 2);
+            size = double.parse(size);
+          } catch (ex) {
+            print(ex);
+            size = 0;
+          }
+
+          if (!GB || (GB && size <= 4.0)) {
+            torrentCardsall.add(renderTorrent(s["title"],
+                'Seeds:' + s['seeds'] + ' | ' + s['source'] + ' | ' + s['size'],
+                () {
+              changePageTo(context, AddMagnet(magnet: s['magnet']), false);
+            }));
+          }
+        });
+      } catch (ex) {
+        torrentCardsall.add(Container(
+          child: Text("Server Error"),
+        ));
+      }
 
       one337.forEach((element) {
         var snip = element["text"].split("\n");
@@ -194,11 +200,10 @@ class _SearchPageState extends State<SearchPage>
             var magnet =
                 doc.querySelector('.clearfix ul li a')?.attributes['href'] ??
                     "";
-            
+
             Navigator.pop(context);
 
             changePageTo(context, AddMagnet(magnet: magnet), false);
-
           }));
         }
       });
@@ -248,23 +253,25 @@ class _SearchPageState extends State<SearchPage>
           //     height: 200,
           //   ),
           // ),
-          widget.switchTheme != null ? Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              widget.switchTheme,
-              IconButton(
-                onPressed: () {
-                  boxLogin.delete("user");
-                  boxLogin.delete("pass");
-                  boxLogin.delete("token");
-                  changePageTo(context,
-                      LoginView(switchTheme: widget.switchTheme), true);
-                },
-                icon: Icon(Icons.logout),
-                tooltip: "Logout",
-              )
-            ],
-          ) : SizedBox(),
+          widget.switchTheme != null
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    widget.switchTheme,
+                    IconButton(
+                      onPressed: () {
+                        boxLogin.delete("user");
+                        boxLogin.delete("pass");
+                        boxLogin.delete("token");
+                        changePageTo(context,
+                            LoginView(switchTheme: widget.switchTheme), true);
+                      },
+                      icon: Icon(Icons.logout),
+                      tooltip: "Logout",
+                    )
+                  ],
+                )
+              : SizedBox(),
           Padding(
             padding: EdgeInsets.only(left: 20.0, top: 20),
             child: Text(
