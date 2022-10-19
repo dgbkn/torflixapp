@@ -18,7 +18,7 @@ var boxLogin = Hive.box("login_info");
 
 class SearchPage extends StatefulWidget {
   final switchTheme;
-  const SearchPage({required this.switchTheme});
+  const SearchPage({this.switchTheme});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -248,7 +248,7 @@ class _SearchPageState extends State<SearchPage>
           //     height: 200,
           //   ),
           // ),
-          Row(
+          widget.switchTheme.isNullOrBlank ? Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               widget.switchTheme,
@@ -264,7 +264,7 @@ class _SearchPageState extends State<SearchPage>
                 tooltip: "Logout",
               )
             ],
-          ),
+          ) : SizedBox(),
           Padding(
             padding: EdgeInsets.only(left: 20.0, top: 20),
             child: Text(
