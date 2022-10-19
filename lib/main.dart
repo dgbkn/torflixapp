@@ -11,7 +11,7 @@ import 'package:hive_flutter/adapters.dart';
 // import 'package:physicswallah/components/ShowSheetsCourses.dart';
 // import 'package:physicswallah/pages/MainHome.dart';
 import 'package:day_night_switcher/day_night_switcher.dart';
-import 'package:flutter_native_view/flutter_native_view.dart';
+// import 'package:flutter_native_view/flutter_native_view.dart';
 import 'package:seedr_app/pages/LoginScreen.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
 

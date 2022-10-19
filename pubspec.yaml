@@ -47,6 +47,7 @@ dependencies:
   macos_ui: ^1.7.5
   google_fonts: ^3.0.1
   hive_flutter: ^1.1.0
+  youtube_explode_dart: ^1.12.1
   url_launcher: ^6.1.5
   dart_vlc:
     git:

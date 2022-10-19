@@ -11,6 +11,7 @@ import 'package:html/parser.dart';
 import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/pages/AddMagnet.dart';
+import 'package:seedr_app/pages/AllFiles.dart';
 import 'package:seedr_app/pages/LoginScreen.dart';
 import 'package:seedr_app/utils.dart';
 
@@ -268,7 +269,14 @@ class _SearchPageState extends State<SearchPage>
                       },
                       icon: Icon(Icons.logout),
                       tooltip: "Logout",
-                    )
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        changePageTo(context, AllFiles(), false);
+                      },
+                      icon: Icon(Icons.folder),
+                      tooltip: "All Files",
+                    ),
                   ],
                 )
               : SizedBox(),

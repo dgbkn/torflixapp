@@ -26,13 +26,19 @@ class _AddMagnetState extends State<AddMagnet> {
   var initialData = {};
   var status = '';
 
-  void deleteSingle(id, type) async {
+  Future deleteSingle(id, type) async {
     var data = {
       "func": "delete",
-      "delete_arr": [
-        {"type": type, "id": id, "access_token": boxLogin.get("token")}
-      ]
+      "delete_arr": jsonEncode([
+        {
+          "type": type,
+          "id": id.toString(),
+        }
+      ]),
+      "access_token": boxLogin.get("token")
     };
+
+    print(data);
 
     final response = await post(
       Uri.parse('https://www.seedr.cc/oauth_test/resource.php'),
@@ -56,12 +62,41 @@ class _AddMagnetState extends State<AddMagnet> {
       if (allTorrentsAndFiles.statusCode == 200) {
         var d = jsonDecode(allTorrentsAndFiles.body);
 
-        d["torrents"].forEach((t) => deleteSingle(t["id"], "torrent"));
-        d["folders"].forEach((t) => deleteSingle(t["id"], "folder"));
+        for (final t in d["torrents"]) {
+          await deleteSingle(t["id"], "torrent");
+        }
 
+        for (final t in d["folders"]) {
+          await deleteSingle(t["id"], "folder");
+        }
+
+        var details = {
+          "func": "add_torrent",
+          "torrent_magnet": magnet,
+          "access_token": boxLogin.get("token")
+        };
+
+        final response = await post(
+          Uri.parse('https://www.seedr.cc/oauth_test/resource.php'),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          encoding: Encoding.getByName('utf-8'),
+          body: details,
+        );
+
+        if (response.statusCode == 200) {
+          var d = jsonDecode(response.body);
+          initialData = d;
+          setState(() {});
+          Timer(Duration(seconds: 3), loadProgurl);
+        } else {
+          print(response.body);
+          Get.snackbar("Error:", "Error Occuced in adding Magnet ",
+              backgroundColor: Colors.redAccent, colorText: Colors.white);
+          Navigator.pop(context);
+        }
       } else {
-
-
         print(allTorrentsAndFiles.body);
 
         var details = {
@@ -99,39 +134,18 @@ class _AddMagnetState extends State<AddMagnet> {
           SystemNavigator.pop();
         }
       }
-
-      var details = {"func": "add_torrent", "torrent_magnet": magnet};
-
-      final response = await post(
-        Uri.parse('https://www.seedr.cc/oauth_test/token.php'),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        encoding: Encoding.getByName('utf-8'),
-        body: details,
-      );
-
-      if (response.statusCode == 200) {
-        var d = jsonDecode(response.body);
-        initialData = d;
-        setState(() {});
-        Timer(Duration(seconds: 3), loadProgurl);
-      } else {
-        Get.snackbar("Error:", "Error Occuced in adding Magnet ",
-            backgroundColor: Colors.redAccent, colorText: Colors.white);
-        Navigator.pop(context);
-      }
     } else {}
   }
 
   void loadProgress(Timer timer, progurl) async {
-    var response = await get(progurl);
+    var response = await get(Uri.parse(progurl));
     var progDataUnformated = response.body;
-    print(progDataUnformated);
 
     var progdata = progDataUnformated.substring(1);
     progdata = progdata.substring(1);
-    progdata = progdata.substring(0, progdata.length-1);
+    progdata = progdata.substring(0, progdata.length - 1);
+
+    print(progdata);
 
     Map finalProg = jsonDecode(progdata);
 
@@ -142,17 +156,26 @@ class _AddMagnetState extends State<AddMagnet> {
         status = "Slow Torrent Detected...";
       });
 
+      Get.snackbar("Error:", "Slow Torrent Detected select other with high seeds..",
+          backgroundColor: Colors.redAccent, colorText: Colors.white);
+
       Timer(Duration(seconds: 3),
           () => changePageTo(context, SearchPage(), true));
     } else {
-      var prog = finalProg["progress"];
+      var prog = finalProg.containsKey("progress") ? finalProg["progress"] : 0;
 
       setState(() {
         status = "Progress : $prog";
       });
 
-      if(int.parse(prog) > 98){
-        // changePageTo(context, toGo, replace)
+      try {
+        if (int.parse(prog) >= 100) {
+          timer.cancel();
+
+          // changePageTo(context, toGo, replace)
+        }
+      } catch (ex) {
+        print(ex);
       }
     }
   }
@@ -187,32 +210,34 @@ class _AddMagnetState extends State<AddMagnet> {
     return SafeArea(
       child: Scaffold(
         body: SingleChildScrollView(
-          child: Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.only(left: 20.0, top: 20),
-                child: Text(
-                  'Adding Magnet.',
-                  style: kLoginTitleStyle(size),
+          child: Center(
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(left: 20.0, top: 20),
+                  child: Text(
+                    'Adding Magnet.',
+                    style: kLoginTitleStyle(size),
+                  ),
                 ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: Text(
-                  initialData.isEmpty ? '....' : initialData["title"],
-                  style: kLoginSubtitleStyle(size),
+                const SizedBox(
+                  height: 10,
                 ),
-              ),
-              status.isEmpty
-                  ? CircularProgressIndicator()
-                  : Text(
-                      status,
-                      style: kLoginTermsAndPrivacyStyle(size),
-                    ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: Text(
+                    initialData.isEmpty ? '....' : initialData["title"],
+                    style: kLoginSubtitleStyle(size),
+                  ),
+                ),
+                status.isEmpty
+                    ? CircularProgressIndicator()
+                    : Text(
+                        status,
+                        style: kLoginSubtitleStyle(size),
+                      ),
+              ],
+            ),
           ),
         ),
       ),
