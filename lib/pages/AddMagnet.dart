@@ -30,22 +30,20 @@ class _AddMagnetState extends State<AddMagnet> {
     var data = {
       "func": "delete",
       "delete_arr": [
-        {"type": type, "id": id ,"access_token":boxLogin.get("token")}
+        {"type": type, "id": id, "access_token": boxLogin.get("token")}
       ]
     };
 
+    final response = await post(
+      Uri.parse('https://www.seedr.cc/oauth_test/resource.php'),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      encoding: Encoding.getByName('utf-8'),
+      body: data,
+    );
 
-        final response = await post(
-          Uri.parse('https://www.seedr.cc/oauth_test/resource.php'),
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          encoding: Encoding.getByName('utf-8'),
-          body: data,
-        );
-
-
-
+    print(response.body);
   }
 
   void addMagnet(magnet) async {
@@ -58,9 +56,9 @@ class _AddMagnetState extends State<AddMagnet> {
       if (allTorrentsAndFiles.statusCode == 200) {
         var d = jsonDecode(allTorrentsAndFiles.body);
 
-        d["torrents"].forEach((t) => {});
+        d["torrents"].forEach((t) => deleteSingle(t["id"], "torrent"));
+        d["folders"].forEach((t) => deleteSingle(t["id"], "folder"));
 
-        d["folders"].forEach((t) => {});
       } else {
         var details = {
           "grant_type": "password",
