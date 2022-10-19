@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/container.dart';
@@ -45,61 +47,118 @@ class _AllFilesState extends State<AllFiles> {
                 file["name"].contains(".avi");
 
             files.add(Container(
-              child: Column(
-                children: [
-                  Row(children: [
-                    Icon(isVideo ? Icons.video_file_rounded : Icons.file_copy),
-                    Text(file["name"])
-                  ]),
-                  //IMPLEMET OPEN IN MX <> VLC
-                  Row(children: [
-                    isVideo
-                        ? ElevatedButton(
-                            onPressed: () async {
-                              showLoading(context);
+              child: Card(
+                elevation: 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Row(children: [
+                        Icon(isVideo
+                            ? Icons.video_file_rounded
+                            : Icons.file_copy),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: SizedBox(
+                              child: Text(file["name"],
+                                  overflow: TextOverflow.ellipsis),
+                              width: 300),
+                        )
+                      ]),
+                      //IMPLEMET OPEN IN MX <> VLC
+                      Row(children: [
+                        isVideo
+                            ? ElevatedButton(
+                                onPressed: () async {
+                                  showLoading(context);
 
-                              var details = {
-                                "func": "play_video",
-                                "folder_file_id": file["id"]
-                              };
+                                  var details = {
+                                    "func": "play_video",
+                                    "folder_file_id":
+                                        file["folder_file_id"].toString(),
+                                    "access_token": boxLogin.get("token")
+                                  };
 
-                              final response = await post(
-                                Uri.parse(
-                                    'https://www.seedr.cc/oauth_test/resource.php'),
-                                headers: {
-                                  "Content-Type":
-                                      "application/x-www-form-urlencoded",
+                                  final response = await post(
+                                    Uri.parse(
+                                        'https://www.seedr.cc/oauth_test/resource.php'),
+                                    headers: {
+                                      "Content-Type":
+                                          "application/x-www-form-urlencoded",
+                                    },
+                                    encoding: Encoding.getByName('utf-8'),
+                                    body: details,
+                                  );
+
+                                  Navigator.pop(context);
+                                  var st = response.body;
+
+                                  var stt = jsonDecode(st);
+                                  var uri = stt["url_hls"];
+                                  var pre = stt["url_preroll"];
+
+                                  changePageTo(
+                                      context,
+                                      VideoPlayer(
+                                        img: pre,
+                                        url: uri,
+                                        name: file["name"],
+                                      ),
+                                      false);
                                 },
-                                encoding: Encoding.getByName('utf-8'),
-                                body: details,
-                              );
+                                child: Text("Play SD"))
+                            : SizedBox(),
+                        isVideo
+                            ? ElevatedButton(
+                                onPressed: () async {
+                                  showLoading(context);
 
-                              Navigator.pop(context);
-                              var st = response.body;
+                                  var details = {
+                                    "func": "fetch_file",
+                                    "folder_file_id":
+                                        file["folder_file_id"].toString(),
+                                    "access_token": boxLogin.get("token")
+                                  };
 
-                              var stt = jsonDecode(st);
-                              var uri = stt["url_hls"];
-                              var pre = stt["url_preroll"];
+                                  final response = await post(
+                                    Uri.parse(
+                                        'https://www.seedr.cc/oauth_test/resource.php'),
+                                    headers: {
+                                      "Content-Type":
+                                          "application/x-www-form-urlencoded",
+                                    },
+                                    encoding: Encoding.getByName('utf-8'),
+                                    body: details,
+                                  );
 
-                              changePageTo(
-                                  context,
-                                  VideoPlayer(
-                                    img: pre,
-                                    url: uri,
-                                    name: file["name"],
-                                  ),
-                                  false);
-                            },
-                            child: Text("Play SD"))
-                        : SizedBox(),
-                    isVideo
-                        ? ElevatedButton(
+                                  Navigator.pop(context);
+                                  var st = response.body;
+
+                                  var stt = jsonDecode(st);
+                                  var uri = stt["url"];
+                                  var pre =
+                                      "https://i.ibb.co/Y8JWphq/istockphoto-911590226-612x612.jpg";
+
+                                  changePageTo(
+                                      context,
+                                      VideoPlayer(
+                                        img: pre,
+                                        url: uri,
+                                        name: file["name"],
+                                      ),
+                                      false);
+                                },
+                                child: Text("Play HD"))
+                            : SizedBox(),
+                        ElevatedButton(
                             onPressed: () async {
                               showLoading(context);
 
                               var details = {
                                 "func": "fetch_file",
-                                "folder_file_id": file["id"]
+                                "folder_file_id":
+                                    file["folder_file_id"].toString(),
+                                "access_token": boxLogin.get("token")
                               };
 
                               final response = await post(
@@ -118,53 +177,80 @@ class _AllFilesState extends State<AllFiles> {
 
                               var stt = jsonDecode(st);
                               var uri = stt["url"];
-                              var pre =
-                                  "https://i.ibb.co/Y8JWphq/istockphoto-911590226-612x612.jpg";
-
-                              changePageTo(
-                                  context,
-                                  VideoPlayer(
-                                    img: pre,
-                                    url: uri,
-                                    name: file["name"],
-                                  ),
-                                  false);
+                              launchUrlinChrome(uri);
                             },
-                            child: Text("Play HD"))
-                        : SizedBox(),
-                    ElevatedButton(
-                        onPressed: () async {
-                          showLoading(context);
+                            child: Text("Download")),
+                      ]),
 
-                          var details = {
-                            "func": "fetch_file",
-                            "folder_file_id": file["id"]
-                          };
+             
+                      isVideo && !Platform.isAndroid
+                          ? Row(
+                              children: [
+                                DropdownButton<String>(
+                                  items: <String>[
+                                    'VLC',
+                                    'MX Player Pro',
+                                    'MX Player',
+                                    'NPlayer'
+                                  ].map((String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList(),
+                                  hint: Text("Launch HD Video in:"),
+                                  onChanged: (_) async {
+                                    print(_);
+                                    showLoading(context);
 
-                          final response = await post(
-                            Uri.parse(
-                                'https://www.seedr.cc/oauth_test/resource.php'),
-                            headers: {
-                              "Content-Type":
-                                  "application/x-www-form-urlencoded",
-                            },
-                            encoding: Encoding.getByName('utf-8'),
-                            body: details,
-                          );
+                                    var details = {
+                                      "func": "fetch_file",
+                                      "folder_file_id":
+                                          file["folder_file_id"].toString(),
+                                      "access_token": boxLogin.get("token")
+                                    };
 
-                          Navigator.pop(context);
-                          var st = response.body;
+                                    final response = await post(
+                                      Uri.parse(
+                                          'https://www.seedr.cc/oauth_test/resource.php'),
+                                      headers: {
+                                        "Content-Type":
+                                            "application/x-www-form-urlencoded",
+                                      },
+                                      encoding: Encoding.getByName('utf-8'),
+                                      body: details,
+                                    );
 
-                          var stt = jsonDecode(st);
-                          var uri = stt["url"];
-                          launchUrlinChrome(uri);
-                        },
-                        child: Text("Download")),
-                  ]),
-                  SizedBox(
-                    height: 20,
-                  )
-                ],
+                                    Navigator.pop(context);
+                                    var st = response.body;
+
+                                    var stt = jsonDecode(st);
+                                    var uri = stt["url"];
+
+                                    switch (_) {
+                                      case "VLC":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          data:"$uri"
+                                              'package:org.videolan.vlc',
+                                          arguments: {
+                                            'title': file["name"]
+                                          },
+                                        );
+                                        await intent.launch();
+                                        break;
+                                      case "MX Player Pro":
+                                      case "MX Player":
+                                      case "NPlayer":
+                                    }
+                                  },
+                                ),
+                              ],
+                            )
+                          : SizedBox()
+                    ],
+                  ),
+                ),
               ),
             ));
           });
@@ -205,8 +291,7 @@ class _AllFilesState extends State<AllFiles> {
                         child: CircularProgressIndicator(),
                       )
                     : Center(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        child: Wrap(
                           children: files,
                         ),
                       )

@@ -393,7 +393,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: Text(
-                "Dont Forget to show Love to studytalkiitian ❤",
+                "Dont Forget to show Love to Torflix ❤",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             )
