@@ -160,6 +160,7 @@ class _AddMagnetState extends State<AddMagnet> {
       var d = jsonDecode(allTorrentsAndFiles.body);
 
       var progurl = d["torrents"][0]["progress_url"];
+      print(progurl);
 
       Timer.periodic(
           Duration(seconds: 1), (timer) => loadProgress(timer, progurl));
