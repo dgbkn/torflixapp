@@ -127,7 +127,7 @@ class _AddMagnetState extends State<AddMagnet> {
 
     var progdata = progDataUnformated.substring(1);
     progdata = progdata.substring(1);
-    progdata = progdata.substring(0, progdata.length()-1);
+    progdata = progdata.substring(0, progdata.length-1);
 
     Map finalProg = jsonDecode(progdata);
 
