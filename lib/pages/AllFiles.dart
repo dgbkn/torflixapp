@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -232,39 +233,54 @@ class _AllFilesState extends State<AllFiles> {
                                       case "VLC":
                                         AndroidIntent intent = AndroidIntent(
                                           action: 'action_view',
-                                          type:'video/*',
+                                          type: 'video/*',
                                           data: Uri.encodeFull(uri).toString(),
                                           package: 'org.videolan.vlc',
                                           arguments: {'title': file["name"]},
-                                              flags: <int>[
-          Flag.FLAG_ACTIVITY_NEW_TASK,
-          Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-        ],
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
                                         );
                                         await intent.launch();
                                         break;
                                       case "MX Player Pro":
                                         AndroidIntent intent = AndroidIntent(
                                           action: 'action_view',
-                                          data: Uri.encodeFull(uri),
+                                          type: 'video/*',
+                                          data: Uri.encodeFull(uri).toString(),
                                           package: 'com.mxtech.videoplayer.pro',
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
                                         );
                                         await intent.launch();
                                         break;
                                       case "MX Player":
                                         AndroidIntent intent = AndroidIntent(
                                           action: 'action_view',
-                                          data: Uri.encodeFull(uri),
+                                          data: Uri.encodeFull(uri).toString(),
+                                          type: 'video/*',
                                           package: 'com.mxtech.videoplayer.ad',
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
                                         );
                                         await intent.launch();
                                         break;
                                       case "NPlayer":
                                         AndroidIntent intent = AndroidIntent(
                                           action: 'action_view',
-                                          data: Uri.encodeFull(uri),
+                                          data: Uri.encodeFull(uri).toString(),
+                                          type: 'video/*',
                                           package:
                                               'package:com.qinxiandiqi.nplayer',
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
                                         );
                                         await intent.launch();
                                         break;
@@ -284,7 +300,7 @@ class _AllFilesState extends State<AllFiles> {
           setState(() {});
         }
       } else {
-          var details = {
+        var details = {
           "grant_type": "password",
           "client_id": "seedr_chrome",
           "type": "login",
