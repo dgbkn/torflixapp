@@ -6,7 +6,9 @@ Want to Stream freely.This is the app for you 📺 🍿 😍
 
 ## Getting Started
 Register on https://www.seedr.cc/
+
 *optional If you want you can create multiple accounts on seedr with your refferal link to get 4 GB one time storage.
+
 Then Use the email and password in app
 
 Get Latest Releases under:
