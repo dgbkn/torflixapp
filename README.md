@@ -1,16 +1,10 @@
 # TORFLIX APP
 
-A new Flutter project.
+Want to Stream freely.This is the app for you 📺
+
+![Untitled](https://user-images.githubusercontent.com/65810521/196889872-c4c3dc4b-75bb-4750-9c56-9a9a34945c92.png)
 
 ## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Register on https://www.seedr.cc/
+*optional If you want you can create multiple accounts on seedr with your refferal link to get 4 GB one time storage.
+Then Use the email and password in app
