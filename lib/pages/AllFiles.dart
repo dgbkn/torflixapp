@@ -62,15 +62,16 @@ class _AllFilesState extends State<AllFiles> {
                         Icon(isVideo
                             ? Icons.video_file_rounded
                             : Icons.file_copy),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: SizedBox(
-                            width: 250,
-                            child: Flexible(
-                              child: Text(file["name"],
-                              textAlign: TextAlign.left,
-                              style: TextStyle(fontWeight: FontWeight.w500),
-                              ),
+                        Expanded(
+                          child: Container(
+                            width:MediaQuery.of(context).size.width*0.6,
+                            child: Column(
+                              children: [
+                                Text(file["name"],
+                                textAlign: TextAlign.left,
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
                           ),
                         ),

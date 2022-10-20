@@ -233,10 +233,12 @@ class _AddMagnetState extends State<AddMagnet> {
                 ),
                 status.isEmpty
                     ? CircularProgressIndicator()
-                    : Text(
-                        status,
-                        style: kLoginSubtitleStyle(size),
-                      ),
+                    : Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Text(
+                          status,
+                        ),
+                    ),
               ],
             ),
           ),
