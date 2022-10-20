@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
@@ -63,10 +65,16 @@ class _AllFilesState extends State<AllFiles> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: SizedBox(
+                            width: 250,
+                            child: Flexible(
                               child: Text(file["name"],
-                                  overflow: TextOverflow.ellipsis),
-                              width: 300),
-                        )
+                              textAlign: TextAlign.left,
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ),
+                        ),
+
                       ]),
                       //IMPLEMET OPEN IN MX <> VLC
                       Row(children: [
@@ -276,7 +284,113 @@ class _AllFilesState extends State<AllFiles> {
                                           data: Uri.encodeFull(uri).toString(),
                                           type: 'video/*',
                                           package:
-                                              'package:com.qinxiandiqi.nplayer',
+                                              'com.qinxiandiqi.nplayer',
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
+                                        );
+                                        await intent.launch();
+                                        break;
+                                    }
+                                  },
+                                ),
+                              ],
+                            )
+                          : SizedBox(),
+
+                                          isVideo && Platform.isAndroid
+                          ? Row(
+                              children: [
+                                DropdownButton<String>(
+                                  items: <String>[
+                                    'VLC',
+                                    'MX Player Pro',
+                                    'MX Player',
+                                    'NPlayer'
+                                  ].map((String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList(),
+                                  hint: Text("Launch SD Video in:"),
+                                  onChanged: (_) async {
+                                    print(_);
+                                    showLoading(context);
+
+                                    var details = {
+                                      "func": "play_video",
+                                      "folder_file_id":
+                                          file["folder_file_id"].toString(),
+                                      "access_token": boxLogin.get("token")
+                                    };
+
+                                    final response = await post(
+                                      Uri.parse(
+                                          'https://www.seedr.cc/oauth_test/resource.php'),
+                                      headers: {
+                                        "Content-Type":
+                                            "application/x-www-form-urlencoded",
+                                      },
+                                      encoding: Encoding.getByName('utf-8'),
+                                      body: details,
+                                    );
+
+                                    Navigator.pop(context);
+                                    var st = response.body;
+
+                                    var stt = jsonDecode(st);
+                                    var uri = stt["url_hls"];
+
+                                    switch (_) {
+                                      case "VLC":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          type: 'video/*',
+                                          data: Uri.encodeFull(uri).toString(),
+                                          package: 'org.videolan.vlc',
+                                          arguments: {'title': file["name"]},
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
+                                        );
+                                        await intent.launch();
+                                        break;
+                                      case "MX Player Pro":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          type: 'video/*',
+                                          data: Uri.encodeFull(uri).toString(),
+                                          package: 'com.mxtech.videoplayer.pro',
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
+                                        );
+                                        await intent.launch();
+                                        break;
+                                      case "MX Player":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          data: Uri.encodeFull(uri).toString(),
+                                          type: 'video/*',
+                                          package: 'com.mxtech.videoplayer.ad',
+                                          flags: <int>[
+                                            Flag.FLAG_ACTIVITY_NEW_TASK,
+                                            Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                          ],
+                                        );
+                                        await intent.launch();
+                                        break;
+                                      case "NPlayer":
+                                        AndroidIntent intent = AndroidIntent(
+                                          action: 'action_view',
+                                          data: Uri.encodeFull(uri).toString(),
+                                          type: 'video/*',
+                                          package:
+                                              'com.qinxiandiqi.nplayer',
                                           flags: <int>[
                                             Flag.FLAG_ACTIVITY_NEW_TASK,
                                             Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
@@ -340,7 +454,7 @@ class _AllFilesState extends State<AllFiles> {
 
   @override
   void initState() {
-    loadFiles();
+    Timer(Duration(seconds: 2),loadFiles);
     super.initState();
   }
 
