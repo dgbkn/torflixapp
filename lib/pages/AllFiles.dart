@@ -232,9 +232,14 @@ class _AllFilesState extends State<AllFiles> {
                                       case "VLC":
                                         AndroidIntent intent = AndroidIntent(
                                           action: 'action_view',
-                                          data: Uri.encodeFull(uri),
+                                          type:'video/*',
+                                          data: Uri.encodeFull(uri).toString(),
                                           package: 'org.videolan.vlc',
                                           arguments: {'title': file["name"]},
+                                              flags: <int>[
+          Flag.FLAG_ACTIVITY_NEW_TASK,
+          Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+        ],
                                         );
                                         await intent.launch();
                                         break;
