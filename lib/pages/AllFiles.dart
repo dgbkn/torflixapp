@@ -97,7 +97,7 @@ class _AllFilesState extends State<AllFiles> {
 
                                   var stt = jsonDecode(st);
                                   var uri = stt["url_hls"];
-                                  var pre = stt["url_preroll"];
+                                  var pre = stt["url_preroll"]; //img thumb
 
                                   changePageTo(
                                       context,
