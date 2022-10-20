@@ -168,10 +168,10 @@ class _AddMagnetState extends State<AddMagnet> {
       var prog = finalProg.containsKey("progress") ? finalProg["progress"] : 0;
 
       setState(() {
-        status = "Progress : $prog";
+        status = "Progress : $prog%";
       });
 
-      if (prog >= 98) {
+      if (prog >= 100) {
         changePageTo(context, AllFiles(), true);
         // changePageTo(context, toGo, replace)
       } else {
