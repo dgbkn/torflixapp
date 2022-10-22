@@ -15,6 +15,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/pages/VideoPlayer.dart';
+import 'package:seedr_app/pages/vlc_player/VlcPlayer.dart';
 import 'package:seedr_app/utils.dart';
 
 var boxLogin = Hive.box("login_info");
@@ -151,10 +152,18 @@ class _AllFilesState extends State<AllFiles> {
                                   var pre =
                                       "https://i.ibb.co/Y8JWphq/istockphoto-911590226-612x612.jpg";
 
-                                  changePageTo(
+                                 
+                                      Platform.isWindows? 
+                                       changePageTo(
                                       context,
                                       VideoPlayer(
                                         img: pre,
+                                        url: uri,
+                                        name: file["name"],
+                                      ),
+                                      false) : changePageTo(
+                                      context,
+                                      VlcMediaPlayer(
                                         url: uri,
                                         name: file["name"],
                                       ),

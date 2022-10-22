@@ -50,6 +50,7 @@ dependencies:
   youtube_explode_dart: ^1.12.1
   url_launcher: ^6.1.5
   android_intent_plus: ^3.1.5
+  flutter_vlc_player: ^7.1.5
   dart_vlc:
     git:
       url: https://github.com/erikas-taroza/dart_vlc.git # Url to the repository
