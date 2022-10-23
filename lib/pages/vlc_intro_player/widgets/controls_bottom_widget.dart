@@ -475,7 +475,7 @@ class ControlsBottomWidget extends StatelessWidget {
                                 .fullScreen) {
                               SystemChrome.setEnabledSystemUIOverlays([]);
                               SystemChrome.setPreferredOrientations(
-                                  [DeviceOrientation.landscapeRight]);
+                                  [DeviceOrientation.landscapeLeft]);
                               Provider.of<VideoPlayerControlle>(context,
                                       listen: false)
                                   .pause = false;
