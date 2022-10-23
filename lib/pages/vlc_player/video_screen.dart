@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 
 class VideoScreen extends StatefulWidget {
-  const VideoScreen({Key? key}) : super(key: key);
+final url;
+  final name;
+  const VideoScreen({super.key, required this.url, required this.name});
 
   @override
   State<VideoScreen> createState() => _VideoScreenState();
@@ -34,8 +36,7 @@ class _VideoScreenState extends State<VideoScreen>
       vsync: this,
     );
 
-    const videoURL =
-        "https://player.vimeo.com/external/407281461.sd.mp4?s=a48fdfb3ef383217fa2c17cf6023865767839e34";
+    const videoURL = widget.url;
     vlcController = VlcPlayerController.network(videoURL, autoPlay: false);
 
     // Uncomment  if you want autoplay to stop
