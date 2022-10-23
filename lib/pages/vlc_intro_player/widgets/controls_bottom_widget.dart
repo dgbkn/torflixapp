@@ -20,6 +20,160 @@ class ControlsBottomWidget extends StatelessWidget {
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
 
+    Widget getStatusBarButton(onTap, IconData icon) {
+      return Row(
+        children: [
+          Container(
+            height: MediaQuery.of(context).orientation == Orientation.portrait
+                ? height * 0.03
+                : height * 0.05,
+            width: MediaQuery.of(context).orientation == Orientation.portrait
+                ? height * 0.03
+                : height * 0.05,
+            child: GestureDetector(
+              onTap: onTap,
+              child: Stack(
+                children: [
+                  Icon(icon,
+                      color: Colors.white,
+                      size: MediaQuery.of(context).orientation ==
+                              Orientation.portrait
+                          ? height * 0.025
+                          : height * 0.045),
+                  Container(
+                    margin: EdgeInsets.only(
+                      left: MediaQuery.of(context).orientation ==
+                              Orientation.portrait
+                          ? height * (0.03 - 0.017)
+                          : height * (0.05 - 0.025),
+                      top: MediaQuery.of(context).orientation ==
+                              Orientation.portrait
+                          ? height * (0.03 - 0.017)
+                          : height * (0.05 - 0.025),
+                    ),
+                    height: MediaQuery.of(context).orientation ==
+                            Orientation.portrait
+                        ? height * 0.017
+                        : height * 0.025,
+                    width: MediaQuery.of(context).orientation ==
+                            Orientation.portrait
+                        ? height * 0.017
+                        : height * 0.025,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(90),
+                    ),
+                    child: Center(
+                      child: Text(
+                        Provider.of<VideoPlayerControlle>(context)
+                            .speed
+                            .toString(),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: MediaQuery.of(context).orientation ==
+                                    Orientation.portrait
+                                ? height * 0.008
+                                : height * 0.012),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(
+            width: width * 0.015,
+          ),
+        ],
+      );
+    }
+
+      void _getAudioTracks(VlcPlayerController _controller) async {
+    if (!_controller.value.isPlaying) return;
+
+    var audioTracks = await _controller.getAudioTracks();
+    //
+    if (audioTracks != null && audioTracks.isNotEmpty) {
+      var selectedAudioTrackId = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Select Audio'),
+            content: Container(
+              width: double.maxFinite,
+              height: 250,
+              child: ListView.builder(
+                itemCount: audioTracks.keys.length + 1,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(
+                      index < audioTracks.keys.length
+                          ? audioTracks.values.elementAt(index).toString()
+                          : 'Disable',
+                    ),
+                    onTap: () {
+                      Navigator.pop(
+                        context,
+                        index < audioTracks.keys.length
+                            ? audioTracks.keys.elementAt(index)
+                            : -1,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      );
+      if (selectedAudioTrackId != null) {
+        await _controller.setAudioTrack(selectedAudioTrackId);
+      }
+    }
+  }
+
+    void _getSubtitleTracks(VlcPlayerController _controller) async {
+    if (!_controller.value.isPlaying) return;
+
+    var subtitleTracks = await _controller.getSpuTracks();
+    //
+    if (subtitleTracks != null && subtitleTracks.isNotEmpty) {
+      var selectedSubId = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Select Subtitle'),
+            content: Container(
+              width: double.maxFinite,
+              height: 250,
+              child: ListView.builder(
+                itemCount: subtitleTracks.keys.length + 1,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(
+                      index < subtitleTracks.keys.length
+                          ? subtitleTracks.values.elementAt(index).toString()
+                          : 'Disable',
+                    ),
+                    onTap: () {
+                      Navigator.pop(
+                        context,
+                        index < subtitleTracks.keys.length
+                            ? subtitleTracks.keys.elementAt(index)
+                            : -1,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      );
+      if (selectedSubId != null) await _controller.setSpuTrack(selectedSubId);
+    }
+  }
+
     return Provider.of<VideoPlayerControlle>(context).firstClick
         ? Container(
             margin: EdgeInsets.symmetric(horizontal: width * 0.01),
@@ -210,6 +364,9 @@ class ControlsBottomWidget extends StatelessWidget {
                 Container(
                   child: Row(
                     children: [
+                      getStatusBarButton((){_getAudioTracks(controller);}, Icons.audiotrack),
+                      getStatusBarButton((){_getSubtitleTracks(controller);}, Icons.closed_caption),
+                      //dev controls
                       Container(
                         height: MediaQuery.of(context).orientation ==
                                 Orientation.portrait
@@ -245,13 +402,12 @@ class ControlsBottomWidget extends StatelessWidget {
                           },
                           child: Stack(
                             children: [
-                              Icon(
-                                Icons.timer,
-                                color: Colors.white,
-                                size : MediaQuery.of(context).orientation ==
+                              Icon(Icons.timer,
+                                  color: Colors.white,
+                                  size: MediaQuery.of(context).orientation ==
                                           Orientation.portrait
-                                      ? height * 0.025 : height * 0.045
-                              ),
+                                      ? height * 0.025
+                                      : height * 0.045),
                               Container(
                                 margin: EdgeInsets.only(
                                   left: MediaQuery.of(context).orientation ==
@@ -282,9 +438,11 @@ class ControlsBottomWidget extends StatelessWidget {
                                         .toString(),
                                     style: TextStyle(
                                         color: Colors.white,
-                                        fontSize:MediaQuery.of(context).orientation ==
-                                          Orientation.portrait
-                                      ? height * 0.008 : height * 0.012),
+                                        fontSize: MediaQuery.of(context)
+                                                    .orientation ==
+                                                Orientation.portrait
+                                            ? height * 0.008
+                                            : height * 0.012),
                                   ),
                                 ),
                               ),

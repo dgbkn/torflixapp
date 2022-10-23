@@ -8,7 +8,7 @@ class VideoPlayerControlle extends ChangeNotifier {
   bool _pause = false;
   bool _voltar10s = false;
   bool _avancar10s = false;
-  bool _volume = false;
+  bool _volume = true;
   double _speed = 1.0;
   bool _fullScreen = false;
 
