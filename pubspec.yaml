@@ -49,6 +49,8 @@ dependencies:
   hive_flutter: ^1.1.0
   youtube_explode_dart: ^1.12.1
   url_launcher: ^6.1.5
+  provider: ^6.0.4
+  flutter_svg: ^1.1.5
   android_intent_plus: ^3.1.5
   flutter_vlc_player: ^7.1.5
   dart_vlc:
@@ -87,6 +89,7 @@ flutter:
     - assets/
     - assets/img/logo/
     - assets/img/
+    - assets/icons/
     - assets/ca/
 
   # An image asset can refer to one or more resolution-specific "variants", see

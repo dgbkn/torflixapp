@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/adapters.dart';
+import 'package:provider/provider.dart';
 
 // import 'package:physicswallah/components/ShowSheetsCourses.dart';
 // import 'package:physicswallah/pages/MainHome.dart';
@@ -14,6 +15,7 @@ import 'package:day_night_switcher/day_night_switcher.dart';
 // import 'package:flutter_native_view/flutter_native_view.dart';
 import 'package:seedr_app/pages/LoginScreen.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
+import 'package:seedr_app/pages/vlc_intro_player/controller/video_player_controller.dart';
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -46,7 +48,7 @@ void main() async {
 // running stats in maincources.dart
   await Hive.initFlutter();
   await Hive.openBox('login_info'); //  name is totally up to you
- //  name is totally up to you
+  //  name is totally up to you
 
   runApp(const SeedrApp());
 }
@@ -67,28 +69,39 @@ class _SeedrAppState extends State<SeedrApp> {
       this.isDarkModeEnabled = isDarkModeEnabled;
     });
   }
-          var boxLogin = Hive.box("login_info");
 
+  var boxLogin = Hive.box("login_info");
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Torflix App',
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark().copyWith(
-        appBarTheme: AppBarTheme(color: const Color(0xFF253341)),
-        scaffoldBackgroundColor: const Color(0xFF15202B),
-      ),
-      themeMode: isDarkModeEnabled ? ThemeMode.dark : ThemeMode.light,
-      home: !boxLogin.containsKey("pass") ? LoginView( switchTheme: DayNightSwitcher(
-          isDarkModeEnabled: isDarkModeEnabled,
-          onStateChanged: onStateChanged,
-        ),): SearchPage(
-        switchTheme: DayNightSwitcher(
-          isDarkModeEnabled: isDarkModeEnabled,
-          onStateChanged: onStateChanged,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => VideoPlayerControlle(),
         ),
+      ],
+      child: GetMaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Torflix App',
+        theme: ThemeData.light(),
+        darkTheme: ThemeData.dark().copyWith(
+          appBarTheme: AppBarTheme(color: const Color(0xFF253341)),
+          scaffoldBackgroundColor: const Color(0xFF15202B),
+        ),
+        themeMode: isDarkModeEnabled ? ThemeMode.dark : ThemeMode.light,
+        home: !boxLogin.containsKey("pass")
+            ? LoginView(
+                switchTheme: DayNightSwitcher(
+                  isDarkModeEnabled: isDarkModeEnabled,
+                  onStateChanged: onStateChanged,
+                ),
+              )
+            : SearchPage(
+                switchTheme: DayNightSwitcher(
+                  isDarkModeEnabled: isDarkModeEnabled,
+                  onStateChanged: onStateChanged,
+                ),
+              ),
       ),
     );
   }
