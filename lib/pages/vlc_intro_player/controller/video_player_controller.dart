@@ -10,7 +10,7 @@ class VideoPlayerControlle extends ChangeNotifier {
   bool _avancar10s = false;
   bool _volume = true;
   double _speed = 1.0;
-  bool _fullScreen = false;
+  bool _fullScreen = true;
 
   String _position = "00:00";
   String _duration = "00:00";
