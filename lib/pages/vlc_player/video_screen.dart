@@ -36,7 +36,7 @@ class _VideoScreenState extends State<VideoScreen>
       vsync: this,
     );
 
-    vlcController = VlcPlayerController.network(widget.url, autoPlay: false);
+    vlcController = VlcPlayerController.network(widget.url, autoPlay: true);
 
     // Uncomment  if you want autoplay to stop
     // vlcController.addOnInitListener(_stopAutoplay);
