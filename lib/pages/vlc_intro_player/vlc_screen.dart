@@ -61,6 +61,9 @@ class _VLCScreenState extends State<VLCScreen> {
     if (_controller.value.isPlaying) _controller.pause();
     _controller.removeListener(listener);
     _controller.dispose();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
     SystemChrome.setEnabledSystemUIOverlays(
         [SystemUiOverlay.top, SystemUiOverlay.bottom]);
   }
