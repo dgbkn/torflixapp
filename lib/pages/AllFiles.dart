@@ -16,6 +16,8 @@ import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/pages/VideoPlayer.dart';
 import 'package:seedr_app/pages/vlc_player/VlcPlayer.dart';
+import 'package:seedr_app/pages/vlc_player/video_screen.dart';
+
 import 'package:seedr_app/utils.dart';
 
 var boxLogin = Hive.box("login_info");
@@ -163,7 +165,7 @@ class _AllFilesState extends State<AllFiles> {
                                       ),
                                       false) : changePageTo(
                                       context,
-                                      VlcMediaPlayer(
+                                      VideoScreen(
                                         url: uri,
                                         name: file["name"],
                                       ),
