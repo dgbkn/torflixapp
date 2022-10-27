@@ -162,7 +162,7 @@ class _AddMagnetState extends State<AddMagnet> {
           backgroundColor: Colors.redAccent, colorText: Colors.white);
 
       Timer(Duration(seconds: 3),
-          () => changePageTo(context, SearchPage(), true));
+          () => Navigator.pop(context));
     } else {
       print(finalProg);
       var prog = finalProg.containsKey("progress") ? finalProg["progress"] : 0;
