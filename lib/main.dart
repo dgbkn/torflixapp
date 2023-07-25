@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:dart_vlc/dart_vlc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_meedu_videoplayer/init_meedu_player.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:provider/provider.dart';
@@ -31,7 +30,6 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 void main() async {
-  initMeeduPlayer();
 
   //dont even think to enable this.........
   // HttpOverrides.global = MyHttpOverrides();
