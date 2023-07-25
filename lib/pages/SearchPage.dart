@@ -93,47 +93,47 @@ class _SearchPageState extends State<SearchPage>
 
       one337 = one337["result"];
 
-      // try {
-      //   final responseSandr = await post(
-      //     Uri.parse('http://45.61.136.80:8080/search'),
-      //     headers: {
-      //       "Content-Type": "application/x-www-form-urlencoded",
-      //     },
-      //     encoding: Encoding.getByName('utf-8'),
-      //     body: details,
-      //   );
+      try {
+        final responseSandr = await post(
+          Uri.parse('http://sand.aejx.in/deepSearch'),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          encoding: Encoding.getByName('utf-8'),
+          body: details,
+        );
 
-      //   var sandrs = jsonDecode(responseSandr.body);
-      //   sandrs = sandrs["torrents"];
+        var sandrs = jsonDecode(responseSandr.body);
+        sandrs = sandrs["torrents"];
 
-      //   sandrs.forEach((s) {
-      //     var GB = s['size'].contains('GB') ? true : false;
+        sandrs.forEach((s) {
+          var GB = s['size'].contains('GB') ? true : false;
 
-      //     var size;
+          var size;
 
-      //     // print(s["title"] + " "  + size.toString());
+          // print(s["title"] + " "  + size.toString());
 
-      //     try {
-      //       size = s['size'].substring(0, s['size'].length - 2);
-      //       size = double.parse(size);
-      //     } catch (ex) {
-      //       print(ex);
-      //       size = 0;
-      //     }
+          try {
+            size = s['size'].substring(0, s['size'].length - 2);
+            size = double.parse(size);
+          } catch (ex) {
+            print(ex);
+            size = 0;
+          }
 
-      //     if (!GB || (GB && size <= 4.0)) {
-      //       torrentCardsall.add(renderTorrent(s["title"],
-      //           'Seeds:' + s['seeds'] + ' | ' + s['source'] + ' | ' + s['size'],
-      //           () {
-      //         changePageTo(context, AddMagnet(magnet: s['magnet']), false);
-      //       }));
-      //     }
-      //   });
-      // } catch (ex) {
+          if (!GB || (GB && size <= 4.0)) {
+            torrentCardsall.add(renderTorrent(s["title"],
+                'Seeds:' + s['seeds'] + ' | ' + s['source'] + ' | ' + s['size'],
+                () {
+              changePageTo(context, AddMagnet(magnet: s['magnet']), false);
+            }));
+          }
+        });
+      } catch (ex) {
       torrentCardsall.add(Container(
         child: Text("Server Error"),
       ));
-      // }
+      }
 
       one337.forEach((element) {
         var snip = element["text"].split("\n");
