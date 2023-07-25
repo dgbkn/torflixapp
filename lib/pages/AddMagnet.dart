@@ -89,6 +89,12 @@ class _AddMagnetState extends State<AddMagnet> {
 
         if (response.statusCode == 200) {
           var d = jsonDecode(response.body);
+          if(d["result"] == "not_enough_space_wishlist_full"){
+            Get.snackbar("Error:", "Not Enough Space",
+              backgroundColor: Colors.redAccent, colorText: Colors.white);
+              Navigator.pop(context);
+              return;
+          }
           initialData = d;
           setState(() {});
           Timer(Duration(seconds: 3), loadProgurl);

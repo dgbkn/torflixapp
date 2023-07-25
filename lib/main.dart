@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:dart_vlc/dart_vlc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_meedu_videoplayer/init_meedu_player.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:provider/provider.dart';
@@ -12,9 +13,12 @@ import 'package:provider/provider.dart';
 // import 'package:physicswallah/components/ShowSheetsCourses.dart';
 // import 'package:physicswallah/pages/MainHome.dart';
 import 'package:day_night_switcher/day_night_switcher.dart';
+import 'package:seedr_app/pages/HomePage.dart';
 // import 'package:flutter_native_view/flutter_native_view.dart';
 import 'package:seedr_app/pages/LoginScreen.dart';
+// import 'package:seedr_app/pages/LoginScreenNew.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
+import 'package:seedr_app/pages/SearchTMDB.dart';
 import 'package:seedr_app/pages/vlc_intro_player/controller/video_player_controller.dart';
 
 class MyHttpOverrides extends HttpOverrides {
@@ -27,6 +31,8 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 void main() async {
+  initMeeduPlayer();
+
   //dont even think to enable this.........
   // HttpOverrides.global = MyHttpOverrides();
 
@@ -36,7 +42,7 @@ void main() async {
 
   if (Platform.isWindows) {
     // await FlutterNativeView.ensureInitialized();
-    DartVLC.initialize(useFlutterNativeView: true);
+    DartVLC.initialize();
   }
 
   if (!kIsWeb && Platform.isAndroid) {
@@ -90,13 +96,14 @@ class _SeedrAppState extends State<SeedrApp> {
         ),
         themeMode: isDarkModeEnabled ? ThemeMode.dark : ThemeMode.light,
         home: !boxLogin.containsKey("pass")
-            ? LoginView(
-                switchTheme: DayNightSwitcher(
-                  isDarkModeEnabled: isDarkModeEnabled,
-                  onStateChanged: onStateChanged,
-                ),
-              )
-            : SearchPage(
+            // ? LoginView(
+            //     switchTheme: DayNightSwitcher(
+            //       isDarkModeEnabled: isDarkModeEnabled,
+            //       onStateChanged: onStateChanged,
+            //     ),
+            //   )
+            ? HomePage()
+            : SearchTMLDB(
                 switchTheme: DayNightSwitcher(
                   isDarkModeEnabled: isDarkModeEnabled,
                   onStateChanged: onStateChanged,

@@ -94,7 +94,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
       notificationConfiguration: BetterPlayerNotificationConfiguration(
         showNotification: true,
         title: widget.name,
-        author: "StudyTalkIitian",
+        author: "Torflix",
         imageUrl: widget.img,
         activityName: "MainActivity",
       ),
@@ -179,16 +179,18 @@ class _VideoPlayerState extends State<VideoPlayer> {
       if (widget.url.contains("youtu")) {
         initYTWindows(widget.url);
       } else {
-        player = supvid.Player(id: 69420);
+        // player = supvid.Player(id: 69420);
+        
 
-        player!.open(
-          supvid.Media.network(widget.url),
-          autoStart: true, // default
-        );
+        // player!.open(
+        //   supvid.Media.network(widget.url),
+        //   autoStart: true, // default
+        // );
 
-        isVlcLoaded = true;
+        // isVlcLoaded = true;
 
-        setState(() {});
+        // setState(() {});
+        mpcprocessRun(widget.url);
       }
     } else if (io.Platform.isWindows) {
       // launchTelegram(widget.url);
@@ -207,7 +209,11 @@ class _VideoPlayerState extends State<VideoPlayer> {
         !widget.url.contains("index.m3u8") &&
         !widget.url.contains("cloudfront") &&
         !widget.url.contains("bitgravity")) {
+          try{
       player!.dispose();
+          }catch(ex){
+            print(ex);
+          }
     }
   }
 
@@ -232,6 +238,25 @@ class _VideoPlayerState extends State<VideoPlayer> {
         ? "$mainPath\\mpv_paste_in_build\\mpv.exe --http-header-fields=\"$final_headre\""
         : "$mainPath\\mpv_paste_in_build\\mpv.exe";
 
+
+    print(mainPath);
+    var result = io.Process.run(mainPath, [videoUrl]);
+    try{
+    result.then((value) {
+      print(value.exitCode);
+      Navigator.pop(context);
+    });
+    }catch(ex){
+      print(ex);
+    }
+
+  }
+
+  void mpcprocessRun(videoUrl) {
+
+    String mainPath = io.Platform.resolvedExecutable;
+    mainPath = mainPath.substring(0, mainPath.lastIndexOf("\\"));
+    mainPath =  "$mainPath\\mpc_paste_in_build\\mpc-hc.exe";
 
     print(mainPath);
     var result = io.Process.run(mainPath, [videoUrl]);
@@ -280,13 +305,16 @@ class _VideoPlayerState extends State<VideoPlayer> {
                     )
                 : isVlcLoaded
                     ? Center(
-                        child: supvid.Video(
+                        child: 
+                        supvid.Video(
                           player: player,
                           height: queryData.size.width * 1 / 3,
                           width: queryData.size.width,
                           scale: 1.0, // default
                           showControls: true, // show lol
-                          showFullscreenButton: true,
+                          filterQuality: FilterQuality.high,
+                          
+                          // showFullscreenButton: true,
                         ),
                       )
                     : Center(child: CircularProgressIndicator()),

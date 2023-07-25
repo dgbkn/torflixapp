@@ -473,7 +473,7 @@ class ControlsBottomWidget extends StatelessWidget {
                             if (Provider.of<VideoPlayerControlle>(context,
                                     listen: false)
                                 .fullScreen) {
-                              SystemChrome.setEnabledSystemUIOverlays([]);
+                              // SystemChrome.setEnabledSystemUIOverlays([]);
                               SystemChrome.setPreferredOrientations(
                                   [DeviceOrientation.landscapeLeft]);
                               Provider.of<VideoPlayerControlle>(context,
@@ -487,10 +487,10 @@ class ControlsBottomWidget extends StatelessWidget {
                               //       [SystemUiOverlay.bottom]);
                               // }
                             } else {
-                              SystemChrome.setEnabledSystemUIOverlays([
-                                SystemUiOverlay.bottom,
-                                SystemUiOverlay.top
-                              ]);
+                              // SystemChrome.setEnabledSystemUIOverlays([
+                              //   SystemUiOverlay.bottom,
+                              //   SystemUiOverlay.top
+                              // ]);
                               SystemChrome.setPreferredOrientations(
                                   [DeviceOrientation.portraitUp]);
                               Provider.of<VideoPlayerControlle>(context,

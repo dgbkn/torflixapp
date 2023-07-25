@@ -7,7 +7,11 @@
 #include "generated_plugin_registrant.h"
 
 #include <dart_vlc/dart_vlc_plugin.h>
-#include <flutter_native_view/flutter_native_view_plugin.h>
+#include <flutter_meedu_videoplayer/flutter_meedu_videoplayer_plugin_c_api.h>
+#include <fullscreen_window/fullscreen_window_plugin_c_api.h>
+#include <media_kit_libs_windows_video/media_kit_libs_windows_video_plugin_c_api.h>
+#include <media_kit_video/media_kit_video_plugin_c_api.h>
+#include <screen_brightness_windows/screen_brightness_windows_plugin.h>
 #include <screen_retriever/screen_retriever_plugin.h>
 #include <url_launcher_windows/url_launcher_windows.h>
 #include <window_manager/window_manager_plugin.h>
@@ -15,8 +19,16 @@
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   DartVlcPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("DartVlcPlugin"));
-  FlutterNativeViewPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("FlutterNativeViewPlugin"));
+  FlutterMeeduVideoplayerPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FlutterMeeduVideoplayerPluginCApi"));
+  FullscreenWindowPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FullscreenWindowPluginCApi"));
+  MediaKitLibsWindowsVideoPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("MediaKitLibsWindowsVideoPluginCApi"));
+  MediaKitVideoPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("MediaKitVideoPluginCApi"));
+  ScreenBrightnessWindowsPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("ScreenBrightnessWindowsPlugin"));
   ScreenRetrieverPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenRetrieverPlugin"));
   UrlLauncherWindowsRegisterWithRegistrar(

@@ -8,6 +8,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 import 'package:lottie/lottie.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
+import 'package:seedr_app/pages/SearchTMDB.dart';
 import 'package:seedr_app/utils.dart';
 
 import '../constants.dart';
@@ -73,7 +74,7 @@ class _LoginViewState extends State<LoginView> {
         boxLogin.put("user", user);
         boxLogin.put("pass", pass);
         boxLogin.put("token", token);
-        changePageTo(context, SearchPage(switchTheme: widget.switchTheme,), true);
+        changePageTo(context, SearchTMLDB(switchTheme: widget.switchTheme,), true);
 
       } else {
         // If the server did not return a 200 OK response,
@@ -128,6 +129,7 @@ class _LoginViewState extends State<LoginView> {
               height: size.height * 0.25,
               width: double.infinity,
               // fit: BoxFit.fill,
+              
             ),
           ),
         ),

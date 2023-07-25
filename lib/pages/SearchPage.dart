@@ -12,7 +12,9 @@ import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/pages/AddMagnet.dart';
 import 'package:seedr_app/pages/AllFiles.dart';
+import 'package:seedr_app/pages/HomePage.dart';
 import 'package:seedr_app/pages/LoginScreen.dart';
+import 'package:seedr_app/pages/SearchTMDB.dart';
 import 'package:seedr_app/utils.dart';
 
 var boxLogin = Hive.box("login_info");
@@ -91,47 +93,47 @@ class _SearchPageState extends State<SearchPage>
 
       one337 = one337["result"];
 
-      try {
-        final responseSandr = await post(
-          Uri.parse('http://45.61.136.80:8080/search'),
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          encoding: Encoding.getByName('utf-8'),
-          body: details,
-        );
+      // try {
+      //   final responseSandr = await post(
+      //     Uri.parse('http://45.61.136.80:8080/search'),
+      //     headers: {
+      //       "Content-Type": "application/x-www-form-urlencoded",
+      //     },
+      //     encoding: Encoding.getByName('utf-8'),
+      //     body: details,
+      //   );
 
-        var sandrs = jsonDecode(responseSandr.body);
-        sandrs = sandrs["torrents"];
+      //   var sandrs = jsonDecode(responseSandr.body);
+      //   sandrs = sandrs["torrents"];
 
-        sandrs.forEach((s) {
-          var GB = s['size'].contains('GB') ? true : false;
+      //   sandrs.forEach((s) {
+      //     var GB = s['size'].contains('GB') ? true : false;
 
-          var size;
+      //     var size;
 
-          // print(s["title"] + " "  + size.toString());
+      //     // print(s["title"] + " "  + size.toString());
 
-          try {
-            size = s['size'].substring(0, s['size'].length - 2);
-            size = double.parse(size);
-          } catch (ex) {
-            print(ex);
-            size = 0;
-          }
+      //     try {
+      //       size = s['size'].substring(0, s['size'].length - 2);
+      //       size = double.parse(size);
+      //     } catch (ex) {
+      //       print(ex);
+      //       size = 0;
+      //     }
 
-          if (!GB || (GB && size <= 4.0)) {
-            torrentCardsall.add(renderTorrent(s["title"],
-                'Seeds:' + s['seeds'] + ' | ' + s['source'] + ' | ' + s['size'],
-                () {
-              changePageTo(context, AddMagnet(magnet: s['magnet']), false);
-            }));
-          }
-        });
-      } catch (ex) {
-        torrentCardsall.add(Container(
-          child: Text("Server Error"),
-        ));
-      }
+      //     if (!GB || (GB && size <= 4.0)) {
+      //       torrentCardsall.add(renderTorrent(s["title"],
+      //           'Seeds:' + s['seeds'] + ' | ' + s['source'] + ' | ' + s['size'],
+      //           () {
+      //         changePageTo(context, AddMagnet(magnet: s['magnet']), false);
+      //       }));
+      //     }
+      //   });
+      // } catch (ex) {
+      torrentCardsall.add(Container(
+        child: Text("Server Error"),
+      ));
+      // }
 
       one337.forEach((element) {
         var snip = element["text"].split("\n");
@@ -163,7 +165,7 @@ class _SearchPageState extends State<SearchPage>
         var uploader = snip[6];
         var datae = snip[4];
 
-        if ((!GB || (GB && size <= 4.0)) && size != 0) {
+        if ((!GB || (GB && size <= 2.0)) && size != 0) {
           torrentCards337x.add(renderTorrent(name,
               "Seeds - $seeds | Size - $ssiss | Uploaded by - $uploader | $datae",
               () async {
@@ -254,32 +256,31 @@ class _SearchPageState extends State<SearchPage>
           //     height: 200,
           //   ),
           // ),
-          widget.switchTheme != null
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    widget.switchTheme,
-                    IconButton(
-                      onPressed: () {
-                        boxLogin.delete("user");
-                        boxLogin.delete("pass");
-                        boxLogin.delete("token");
-                        changePageTo(context,
-                            LoginView(switchTheme: widget.switchTheme), true);
-                      },
-                      icon: Icon(Icons.logout),
-                      tooltip: "Logout",
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        changePageTo(context, AllFiles(), false);
-                      },
-                      icon: Icon(Icons.folder),
-                      tooltip: "All Files",
-                    ),
-                  ],
-                )
-              : SizedBox(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              widget.switchTheme != null ? widget.switchTheme : SizedBox(),
+              IconButton(
+                onPressed: () {
+                  boxLogin.delete("user");
+                  boxLogin.delete("pass");
+                  boxLogin.delete("token");
+                  // changePageTo(context,
+                  //     LoginView(switchTheme: widget.switchTheme), true);
+                  changePageTo(context, HomePage(), true);
+                },
+                icon: Icon(Icons.logout),
+                tooltip: "Logout",
+              ),
+              IconButton(
+                onPressed: () {
+                  changePageTo(context, AllFiles(), false);
+                },
+                icon: Icon(Icons.folder),
+                tooltip: "All Files",
+              ),
+            ],
+          ),
           Padding(
             padding: EdgeInsets.only(left: 20.0, top: 20),
             child: Text(
@@ -295,6 +296,24 @@ class _SearchPageState extends State<SearchPage>
             child: Text(
               'For Movies/Series 🍿',
               style: kLoginSubtitleStyle(size),
+            ),
+          ),
+                    Padding(
+            padding: const EdgeInsets.only(left: 20.0,top: 10),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                primary: Colors.deepPurpleAccent,
+                onPrimary: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              onPressed: (){
+                changePageTo(context, SearchTMLDB(), true);
+              },
+              child: Text(
+                'Click here for TMDB Search',
+              ),
             ),
           ),
           SizedBox(

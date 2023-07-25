@@ -45,17 +45,24 @@ dependencies:
   path_provider: ^2.0.11
   day_night_switcher: ^0.2.0+1
   macos_ui: ^1.7.5
-  google_fonts: ^3.0.1
+  google_fonts: ^4.0.4
   hive_flutter: ^1.1.0
   youtube_explode_dart: ^1.12.1
+  flutter_meedu_videoplayer: 
+  # device_info_plus: ^3.2.3
+  # google_sign_in: ^6.1.0
   url_launcher: ^6.1.5
+  socket_io_client: ^2.0.2
+  web_socket_channel: ^2.4.0
   provider: ^6.0.4
+  adaptive_components: ^0.0.9
+  
   flutter_svg: ^1.1.5
   android_intent_plus: ^3.1.5
   flutter_vlc_player: ^7.1.5
   dart_vlc:
-    git:
-      url: https://github.com/erikas-taroza/dart_vlc.git # Url to the repository
+    # git:
+    #   url: https://github.com/erikas-taroza/dart_vlc.git # Url to the repository
 
 
   # The following adds the Cupertino Icons font to your application.

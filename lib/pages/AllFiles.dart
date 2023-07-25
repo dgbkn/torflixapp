@@ -15,6 +15,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/pages/VideoPlayer.dart';
+import 'package:seedr_app/pages/meedu_palyer/base_player.dart';
 import 'package:seedr_app/pages/vlc_intro_player/arguments/arguments_vlc_video_intro.dart';
 import 'package:seedr_app/pages/vlc_intro_player/vlc_screen.dart';
 import 'package:seedr_app/pages/vlc_player/VlcPlayer.dart';
@@ -164,8 +165,17 @@ class _AllFilesState extends State<AllFiles> {
                                         img: pre,
                                         url: uri,
                                         name: file["name"],
-                                      ),
-                                      false) : 
+                                      ),false)
+                                      //   changePageTo(
+                                      // context,
+                                      // MeeduPlayer(
+                                      //   // img: pre,
+                                      //   url: uri,
+                                      //   name: file["name"],
+                                      // )
+                                      // ,
+                                      // false)
+                                       : 
                                       changePageTo(
                                       context,
                                       VLCScreen(

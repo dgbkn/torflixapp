@@ -64,8 +64,8 @@ class _VLCScreenState extends State<VLCScreen> {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
-    SystemChrome.setEnabledSystemUIOverlays(
-        [SystemUiOverlay.top, SystemUiOverlay.bottom]);
+    // SystemChrome.setSystemUIOverlayStyle(
+    //    SystemUiOverlayStyle.);
   }
 
   void listener() async {
