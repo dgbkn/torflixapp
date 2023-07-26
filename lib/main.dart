@@ -94,13 +94,13 @@ class _SeedrAppState extends State<SeedrApp> {
         ),
         themeMode: isDarkModeEnabled ? ThemeMode.dark : ThemeMode.light,
         home: !boxLogin.containsKey("pass")
-            // ? LoginView(
-            //     switchTheme: DayNightSwitcher(
-            //       isDarkModeEnabled: isDarkModeEnabled,
-            //       onStateChanged: onStateChanged,
-            //     ),
-            //   )
-            ? HomePage()
+            ? LoginView(
+                switchTheme: DayNightSwitcher(
+                  isDarkModeEnabled: isDarkModeEnabled,
+                  onStateChanged: onStateChanged,
+                ),
+              )
+            // ? HomePage()
             : SearchTMLDB(
                 switchTheme: DayNightSwitcher(
                   isDarkModeEnabled: isDarkModeEnabled,
