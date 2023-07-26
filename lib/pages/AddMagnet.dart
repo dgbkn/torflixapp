@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:async/async.dart';
 
 import 'package:flutter/material.dart';
@@ -9,9 +10,11 @@ import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart';
+import 'package:process_run/process_run.dart';
 import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/pages/AllFiles.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
+import 'package:seedr_app/pages/nodejsutils.dart';
 import 'package:seedr_app/utils.dart';
 
 var boxLogin = Hive.box("login_info");
@@ -89,11 +92,11 @@ class _AddMagnetState extends State<AddMagnet> {
 
         if (response.statusCode == 200) {
           var d = jsonDecode(response.body);
-          if(d["result"] == "not_enough_space_wishlist_full"){
+          if (d["result"] == "not_enough_space_wishlist_full") {
             Get.snackbar("Error:", "Not Enough Space",
-              backgroundColor: Colors.redAccent, colorText: Colors.white);
-              Navigator.pop(context);
-              return;
+                backgroundColor: Colors.redAccent, colorText: Colors.white);
+            Navigator.pop(context);
+            return;
           }
           initialData = d;
           setState(() {});
@@ -167,8 +170,7 @@ class _AddMagnetState extends State<AddMagnet> {
           "Error:", "Slow Torrent Detected select other with high seeds..",
           backgroundColor: Colors.redAccent, colorText: Colors.white);
 
-      Timer(Duration(seconds: 3),
-          () => Navigator.pop(context));
+      Timer(Duration(seconds: 3), () => Navigator.pop(context));
     } else {
       print(finalProg);
       var prog = finalProg.containsKey("progress") ? finalProg["progress"] : 0;
@@ -202,9 +204,17 @@ class _AddMagnetState extends State<AddMagnet> {
     }
   }
 
+  bool peerflixUi = false;
+
   @override
   void initState() {
-    addMagnet(widget.magnet);
+    if (Platform.isWindows && checkExecutable("peerflix")) {
+      peerflixUi = true;
+    } else {
+      addMagnet(widget.magnet);
+    }
+
+    // addMagnet(widget.magnet);
     super.initState();
   }
 
@@ -213,40 +223,136 @@ class _AddMagnetState extends State<AddMagnet> {
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
+    void mpcprocessRun(videoUrl) {
+      String mainPath = Platform.resolvedExecutable;
+      mainPath = mainPath.substring(0, mainPath.lastIndexOf("\\"));
+      mainPath = "$mainPath\\mpc_paste_in_build\\mpc-hc.exe";
+
+      print(mainPath);
+      var result = Process.run(mainPath, [videoUrl]);
+      try {
+        result.then((value) {
+          try{
+          Shell().run('taskkill /f /im node.exe');
+          }catch(ex){
+            print(ex);
+          }
+          print(value.exitCode);
+          Navigator.pop(context);
+        });
+      } catch (ex) {
+        print(ex);
+      }
+    }
 
     return SafeArea(
       child: Scaffold(
+        appBar: AppBar(),
         body: SingleChildScrollView(
           child: Center(
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(left: 20.0, top: 20),
-                  child: Text(
-                    'Adding Magnet.',
-                    style: kLoginTitleStyle(size),
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: Text(
-                    initialData.isEmpty ? '....' : initialData["title"],
-                    style: kLoginSubtitleStyle(size),
-                  ),
-                ),
-                status.isEmpty
-                    ? CircularProgressIndicator()
-                    : Padding(
-                      padding: const EdgeInsets.all(14.0),
-                      child: Text(
-                          status,
+            child: !peerflixUi
+                ? Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(left: 20.0, top: 20),
+                        child: Text(
+                          'Adding Magnet.',
+                          style: kLoginTitleStyle(size),
                         ),
-                    ),
-              ],
-            ),
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20.0),
+                        child: Text(
+                          initialData.isEmpty ? '....' : initialData["title"],
+                          style: kLoginSubtitleStyle(size),
+                        ),
+                      ),
+                      status.isEmpty
+                          ? CircularProgressIndicator()
+                          : Padding(
+                              padding: const EdgeInsets.all(14.0),
+                              child: Text(
+                                status,
+                              ),
+                            ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 20,
+                      ),
+                      ElevatedButton(
+                          onPressed: () {
+                            bool gotUrl = false;
+                            final _stdoutCtlr = StreamController<List<int>>();
+                            final _stderrCtlr = StreamController<List<int>>();
+                            var shell = Shell(
+                                stdout: _stdoutCtlr.sink,
+                                stderr: _stderrCtlr.sink,throwOnError: false);
+
+                            _stdoutCtlr.stream.listen((event) {
+                              if (gotUrl) {
+                                return;
+                              }
+                              var log = utf8.decode(event);
+                              var first = log.split("\n")[0];
+                              first =
+                                  first.replaceAll("open vlc and enter ", "");
+                              first = first.replaceAll(
+                                  " as the network address", "");
+                              print(["LOG IS;", first]);
+                              if (first.contains("http://")) {
+                                RegExp exp = new RegExp(
+                                    r'(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-?=%.]+');
+                                Iterable<RegExpMatch> matches =
+                                    exp.allMatches(first);
+                                matches.forEach((match) {
+                                  var link =
+                                      first.substring(match.start, match.end);
+                                  mpcprocessRun(link + ":8888");
+                                  gotUrl = true;
+                                });
+                              }
+                            });
+
+                            _stderrCtlr.stream.listen((event) {
+                              print(utf8.decode(event));
+                            });
+
+                            try {
+                      
+                              // var run = shell.runExecutableArguments(
+                              //   "peerflix",
+                              //   [  
+                              //     widget.magnet,
+                              //     "--remove",
+                              //     "--quiet"
+                              //   ],
+                              // );
+                              var d = shell.run("peerflix ${widget.magnet} --remove --quiet");
+                            } catch (ex) {
+                              print(ex);
+                            }
+                          },
+                          child: Text("Open in Peerflix")),
+                      SizedBox(
+                        height: 20,
+                      ),
+                      ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              peerflixUi = false;
+                            });
+                            addMagnet(widget.magnet);
+                          },
+                          child: Text("Continue Normally"))
+                    ],
+                  ),
           ),
         ),
       ),

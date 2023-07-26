@@ -15,3 +15,11 @@ https://github.com/dgbkn/torflixapp/releases
 Available For both android and windows...
 
 Peace in Love ❤️
+<br><br>
+Install Peerflix after installing node js for Direct Torrent Streaming no need of seedr:<br>
+<pre>
+npm install -g peerflix (beta)<br>
+To Uninstall PeerFlix:npm uninstall -g peerflix <br>
+
+
+</pre>
