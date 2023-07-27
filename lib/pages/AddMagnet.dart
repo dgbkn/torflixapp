@@ -92,12 +92,21 @@ class _AddMagnetState extends State<AddMagnet> {
 
         if (response.statusCode == 200) {
           var d = jsonDecode(response.body);
-          if (d["result"] == "not_enough_space_wishlist_full") {
-            Get.snackbar("Error:", "Not Enough Space",
+          print(d);
+
+          if (d["result"] != true) {
+            Get.snackbar("Error:", d["result"],
                 backgroundColor: Colors.redAccent, colorText: Colors.white);
             Navigator.pop(context);
             return;
           }
+          // if (d["result"] == "not_enough_space_wishlist_full") {
+          //   Get.snackbar("Error:", "Not Enough Space",
+          //       backgroundColor: Colors.redAccent, colorText: Colors.white);
+          //   Navigator.pop(context);
+          //   return;
+          // }
+
           initialData = d;
           setState(() {});
           Timer(Duration(seconds: 3), loadProgurl);
@@ -176,7 +185,9 @@ class _AddMagnetState extends State<AddMagnet> {
       var prog = finalProg.containsKey("progress") ? finalProg["progress"] : 0;
 
       setState(() {
-        status = "Progress : $prog%";
+        double proge = double.tryParse(prog.toString()) ?? 0;
+        proge = proge.ceilToDouble();
+        status = "Progress : $proge%";
       });
 
       if (prog >= 100) {
@@ -232,9 +243,9 @@ class _AddMagnetState extends State<AddMagnet> {
       var result = Process.run(mainPath, [videoUrl]);
       try {
         result.then((value) {
-          try{
-          Shell().run('taskkill /f /im node.exe');
-          }catch(ex){
+          try {
+            Shell().run('taskkill /f /im node.exe');
+          } catch (ex) {
             print(ex);
           }
           print(value.exitCode);
@@ -252,16 +263,15 @@ class _AddMagnetState extends State<AddMagnet> {
           child: Center(
             child: !peerflixUi
                 ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Padding(
-                        padding: EdgeInsets.only(left: 20.0, top: 20),
-                        child: Text(
-                          'Adding Magnet.',
-                          style: kLoginTitleStyle(size),
-                        ),
+                      SizedBox(height: 50),
+                      Text(
+                        'Adding Magnet.',
+                        style: kLoginTitleStyle(size),
                       ),
                       const SizedBox(
-                        height: 10,
+                        height: 15,
                       ),
                       Padding(
                         padding: const EdgeInsets.only(left: 20.0),
@@ -270,12 +280,17 @@ class _AddMagnetState extends State<AddMagnet> {
                           style: kLoginSubtitleStyle(size),
                         ),
                       ),
+                      const SizedBox(
+                        height: 15,
+                      ),
                       status.isEmpty
                           ? CircularProgressIndicator()
                           : Padding(
                               padding: const EdgeInsets.all(14.0),
                               child: Text(
                                 status,
+                                style: TextStyle(
+                                    fontSize: 25, fontWeight: FontWeight.w500),
                               ),
                             ),
                     ],
@@ -293,7 +308,8 @@ class _AddMagnetState extends State<AddMagnet> {
                             final _stderrCtlr = StreamController<List<int>>();
                             var shell = Shell(
                                 stdout: _stdoutCtlr.sink,
-                                stderr: _stderrCtlr.sink,throwOnError: false);
+                                stderr: _stderrCtlr.sink,
+                                throwOnError: false);
 
                             _stdoutCtlr.stream.listen((event) {
                               if (gotUrl) {
@@ -325,16 +341,16 @@ class _AddMagnetState extends State<AddMagnet> {
                             });
 
                             try {
-                      
                               // var run = shell.runExecutableArguments(
                               //   "peerflix",
-                              //   [  
+                              //   [
                               //     widget.magnet,
                               //     "--remove",
                               //     "--quiet"
                               //   ],
                               // );
-                              var d = shell.run("peerflix ${widget.magnet} --remove --quiet");
+                              var d = shell.run(
+                                  "peerflix ${widget.magnet} --remove --quiet");
                             } catch (ex) {
                               print(ex);
                             }

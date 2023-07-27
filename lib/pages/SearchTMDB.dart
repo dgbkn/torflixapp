@@ -214,9 +214,9 @@ class _SearchTMLDBState extends State<SearchTMLDB>
                   boxLogin.delete("user");
                   boxLogin.delete("pass");
                   boxLogin.delete("token");
-                  // changePageTo(context,
-                  //     LoginView(switchTheme: widget.switchTheme), true);
-                  changePageTo(context, HomePage(), true);
+                  changePageTo(context,
+                      LoginView(switchTheme: widget.switchTheme), true);
+                  // changePageTo(context, HomePage(), true);
                 },
                 icon: Icon(Icons.logout),
                 tooltip: "Logout",
