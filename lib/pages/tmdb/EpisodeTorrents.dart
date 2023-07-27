@@ -36,10 +36,10 @@ class _EpisodeTorrentsState extends State<EpisodeTorrents> {
               child: Column(
                 children: [
                   Text(
-                    torrent["title"],
+                    torrent["title"] ?? "",
                     style: TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  Text(torrent["behaviorHints"]["bingeGroup"]),
+                  Text(torrent["behaviorHints"]["bingeGroup"] ?? ""),
                 ],
               ),
             ),

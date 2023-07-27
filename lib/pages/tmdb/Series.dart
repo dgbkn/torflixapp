@@ -87,13 +87,13 @@ class _SeriesState extends State<Series> {
                       Container(
                         width: responsive * 0.5,
                         child: Text(
-                          subtitle,
+                          subtitle ?? "",
                         ),
                       ),
                       Container(
                         width: responsive * 0.5,
                         child: Text(
-                          "type:" + category,
+                          "type:" + category ?? "",
                           style: TextStyle(fontWeight: FontWeight.w600),
                           softWrap: true,
                         ),
