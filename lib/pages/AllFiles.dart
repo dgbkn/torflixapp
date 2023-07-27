@@ -448,6 +448,15 @@ class _AllFilesState extends State<AllFiles> {
             ));
           });
 
+
+          if(files.isEmpty){
+               files.add(
+                Container(
+                 child: Center(child: Text("No Files Found")),  
+               )
+               );
+          }
+
           setState(() {});
         }
       } else {
