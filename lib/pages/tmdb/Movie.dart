@@ -39,7 +39,7 @@ class _MovieState extends State<Movie> {
                     torrent["title"],
                     style: TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  Text(torrent["behaviorHints"]["bingeGroup"]),
+                  Text(torrent["behaviorHints"]["bingeGroup"] ?? ""),
                 ],
               ),
             ),

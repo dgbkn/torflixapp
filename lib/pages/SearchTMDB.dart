@@ -79,7 +79,7 @@ class _SearchTMLDBState extends State<SearchTMLDB>
                       Container(
                         width: responsive * 0.5,
                         child: Text(
-                          name,
+                          name ?? "",
                           style: TextStyle(fontWeight: FontWeight.w600),
                           softWrap: true,
                         ),
@@ -87,13 +87,13 @@ class _SearchTMLDBState extends State<SearchTMLDB>
                       Container(
                         width: responsive * 0.5,
                         child: Text(
-                          subtitle,
+                          subtitle ?? "",
                         ),
                       ),
                       Container(
                         width: responsive * 0.5,
                         child: Text(
-                          "type:" + category,
+                          "type:" + category ?? "",
                           style: TextStyle(fontWeight: FontWeight.w600),
                           softWrap: true,
                         ),
