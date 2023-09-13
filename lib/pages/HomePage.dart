@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
   bool isSeedrLoaded = false;
   int _prog = 0;
 
-  IO.Socket socket = IO.io('https://seedrmaker-production.up.railway.app/', <String, dynamic>{
+  IO.Socket socket = IO.io('http://4.194.48.214/', <String, dynamic>{
     'autoConnect': false,
     'transports': ['websocket'],
   });
