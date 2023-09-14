@@ -33,7 +33,7 @@ jobs:
       - name: Push Release
         uses: ncipollo/release-action@v1
         with:
-        #  artifacts: "build/app/outputs/flutter-apk/*.apk,build/windows/runner/Release/TorFlix-${{github.ref_name}}-windows.zip"
-         artifacts: "build/windows/runner/Release/TorFlix-${{github.ref_name}}-windows.zip"
+         artifacts: "build/app/outputs/flutter-apk/*.apk,build/windows/runner/Release/TorFlix-${{github.ref_name}}-windows.zip"
+         #artifacts: "build/windows/runner/Release/TorFlix-${{github.ref_name}}-windows.zip"
          token: ${{ secrets.TOKEN }}
          tag: 1.0.${{github.run_number}}
