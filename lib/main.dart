@@ -101,13 +101,12 @@ class _SeedrAppState extends State<SeedrApp> {
             //     ),
             //   )
             ? HomePage()
-            : HomePage()
-            // : SearchTMLDB(
-            //     switchTheme: DayNightSwitcher(
-            //       isDarkModeEnabled: isDarkModeEnabled,
-            //       onStateChanged: onStateChanged,
-            //     ),
-            //   ),
+            : SearchTMLDB(
+                switchTheme: DayNightSwitcher(
+                  isDarkModeEnabled: isDarkModeEnabled,
+                  onStateChanged: onStateChanged,
+                ),
+              ),
       ),
     );
   }
