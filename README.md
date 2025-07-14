@@ -2,7 +2,7 @@
 
 Want to Stream freely.This is the app for you 📺 🍿 😍
 
-![Untitled]<img width="1161" height="846" alt="image" src="https://github.com/user-attachments/assets/380e36ed-4671-4f3f-af55-587d4adfdbd2" />
+<img width="1161" height="846" alt="image" src="https://github.com/user-attachments/assets/380e36ed-4671-4f3f-af55-587d4adfdbd2" />
 
 
 ## Getting Started
