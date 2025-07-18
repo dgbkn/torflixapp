@@ -4,26 +4,25 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart';
 import 'package:lottie/lottie.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
-import 'package:seedr_app/pages/SearchTMDB.dart';
 import 'package:seedr_app/utils.dart';
 
 import '../constants.dart';
 import '../controller/simple_ui_controller.dart';
 
-class LoginView extends StatefulWidget {
-    final switchTheme;
+class LoginScreen extends StatefulWidget {
+  final switchTheme;
 
-  const LoginView({Key? key,required this.switchTheme}) : super(key: key);
+  const LoginScreen({Key? key, required this.switchTheme}) : super(key: key);
 
   @override
-  State<LoginView> createState() => _LoginViewState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginViewState extends State<LoginView> {
+class _LoginScreenState extends State<LoginScreen> {
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
@@ -39,7 +38,6 @@ class _LoginViewState extends State<LoginView> {
   }
 
   bool showProg = false;
-
 
   Future loginToSeedr(user, pass) async {
     var connected = await checkUserConnection();
@@ -66,7 +64,8 @@ class _LoginViewState extends State<LoginView> {
         // If the server did return a 200 OK response,
         // then parse the JSON.
         var d = jsonDecode(response.body);
-        Get.snackbar("Login Success", "",backgroundColor: Colors.greenAccent,colorText: Colors.white);
+        Get.snackbar("Login Success", "",
+            backgroundColor: Colors.greenAccent, colorText: Colors.white);
         var token = d["access_token"];
         print(response.body);
         var boxLogin = Hive.box("login_info");
@@ -74,13 +73,18 @@ class _LoginViewState extends State<LoginView> {
         boxLogin.put("user", user);
         boxLogin.put("pass", pass);
         boxLogin.put("token", token);
-        changePageTo(context, SearchTMLDB(switchTheme: widget.switchTheme,), true);
-
+        changePageTo(
+            context,
+            SearchPage(
+              switchTheme: widget.switchTheme,
+            ),
+            true);
       } else {
         // If the server did not return a 200 OK response,
         // then throw an exception.
         var d = jsonDecode(response.body);
-        Get.snackbar(d["error_description"], "Please Check The Form",backgroundColor: Colors.redAccent,colorText: Colors.white);
+        Get.snackbar(d["error_description"], "Please Check The Form",
+            backgroundColor: Colors.redAccent, colorText: Colors.white);
         print(response.body + user + pass);
       }
 
@@ -129,7 +133,6 @@ class _LoginViewState extends State<LoginView> {
               height: size.height * 0.25,
               width: double.infinity,
               // fit: BoxFit.fill,
-              
             ),
           ),
         ),

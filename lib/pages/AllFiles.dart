@@ -11,15 +11,9 @@ import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart';
 import 'package:seedr_app/constants.dart';
-import 'package:seedr_app/pages/VideoPlayer.dart';
-import 'package:seedr_app/pages/meedu_palyer/base_player.dart';
-import 'package:seedr_app/pages/vlc_intro_player/arguments/arguments_vlc_video_intro.dart';
-import 'package:seedr_app/pages/vlc_intro_player/vlc_screen.dart';
-import 'package:seedr_app/pages/vlc_player/VlcPlayer.dart';
-import 'package:seedr_app/pages/vlc_player/video_screen.dart';
 
 import 'package:seedr_app/utils.dart';
 
@@ -70,18 +64,18 @@ class _AllFilesState extends State<AllFiles> {
                             : Icons.file_copy),
                         Expanded(
                           child: Container(
-                            width:MediaQuery.of(context).size.width*0.6,
+                            width: MediaQuery.of(context).size.width * 0.6,
                             child: Column(
                               children: [
-                                Text(file["name"],
-                                textAlign: TextAlign.left,
-                                style: TextStyle(fontWeight: FontWeight.w500),
+                                Text(
+                                  file["name"],
+                                  textAlign: TextAlign.left,
+                                  style: TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ],
                             ),
                           ),
                         ),
-
                       ]),
                       //IMPLEMET OPEN IN MX <> VLC
                       Row(children: [
@@ -114,17 +108,8 @@ class _AllFilesState extends State<AllFiles> {
                                   var stt = jsonDecode(st);
                                   var uri = stt["url_hls"];
                                   var pre = stt["url_preroll"]; //img thumb
-
-                                  changePageTo(
-                                      context,
-                                      VideoPlayer(
-                                        img: pre,
-                                        url: uri,
-                                        name: file["name"],
-                                      ),
-                                      false);
                                 },
-                                child: Text("Play SD"))
+                                child: Text("Play SD (VLC ONLY)"))
                             : SizedBox(),
                         isVideo
                             ? ElevatedButton(
@@ -156,47 +141,8 @@ class _AllFilesState extends State<AllFiles> {
                                   var uri = stt["url"];
                                   var pre =
                                       "https://i.ibb.co/Y8JWphq/istockphoto-911590226-612x612.jpg";
-
-                                 
-                                      Platform.isWindows? 
-                                       changePageTo(
-                                      context,
-                                      VideoPlayer(
-                                        img: pre,
-                                        url: uri,
-                                        name: file["name"],
-                                      ),false)
-                                      //   changePageTo(
-                                      // context,
-                                      // MeeduPlayer(
-                                      //   // img: pre,
-                                      //   url: uri,
-                                      //   name: file["name"],
-                                      // )
-                                      // ,
-                                      // false)
-                                       : 
-                                      changePageTo(
-                                      context,
-                                      VLCScreen(
-                                        ArgumentsVlcVideoIntro(
-                                          inApp: false,
-                                          url: uri,
-                                          heightGlobal: MediaQuery.of(context).size.height,
-                                          widthGlobal: MediaQuery.of(context).size.width
-                                        ),
-                             
-                                      ),
-                                      false);
-                                      // changePageTo(
-                                      // context,
-                                      // VideoScreen(
-                                      //   url: uri,
-                                      //   name: file["name"],
-                                      // ),
-                                      // false);
                                 },
-                                child: Text("Play HD"))
+                                child: Text("Play HD (VLC ONLY)"))
                             : SizedBox(),
                         ElevatedButton(
                             onPressed: () async {
@@ -320,8 +266,7 @@ class _AllFilesState extends State<AllFiles> {
                                           action: 'action_view',
                                           data: Uri.encodeFull(uri).toString(),
                                           type: 'video/*',
-                                          package:
-                                              'com.qinxiandiqi.nplayer',
+                                          package: 'com.qinxiandiqi.nplayer',
                                           flags: <int>[
                                             Flag.FLAG_ACTIVITY_NEW_TASK,
                                             Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
@@ -336,7 +281,7 @@ class _AllFilesState extends State<AllFiles> {
                             )
                           : SizedBox(),
 
-                                          isVideo && Platform.isAndroid
+                      isVideo && Platform.isAndroid
                           ? Row(
                               children: [
                                 DropdownButton<String>(
@@ -426,8 +371,7 @@ class _AllFilesState extends State<AllFiles> {
                                           action: 'action_view',
                                           data: Uri.encodeFull(uri).toString(),
                                           type: 'video/*',
-                                          package:
-                                              'com.qinxiandiqi.nplayer',
+                                          package: 'com.qinxiandiqi.nplayer',
                                           flags: <int>[
                                             Flag.FLAG_ACTIVITY_NEW_TASK,
                                             Flag.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
@@ -448,13 +392,10 @@ class _AllFilesState extends State<AllFiles> {
             ));
           });
 
-
-          if(files.isEmpty){
-               files.add(
-                Container(
-                 child: Center(child: Text("No Files Found")),  
-               )
-               );
+          if (files.isEmpty) {
+            files.add(Container(
+              child: Center(child: Text("No Files Found")),
+            ));
           }
 
           setState(() {});
@@ -500,7 +441,7 @@ class _AllFilesState extends State<AllFiles> {
 
   @override
   void initState() {
-    Timer(Duration(seconds: 2),loadFiles);
+    Timer(Duration(seconds: 2), loadFiles);
     super.initState();
   }
 

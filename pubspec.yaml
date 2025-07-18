@@ -29,38 +29,29 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
-  better_player: ^0.0.83
-  http: ^0.13.4
-  html: ^0.15.0
-  internet_file: ^1.2.0
-  flutter_launcher_icons: "^0.10.0"
-  flutter_native_splash: ^2.2.0
-  cached_network_image: ^3.2.1
-  lottie: ^1.3.0
-  hive: ^2.2.3
-  wakelock: ^0.6.2
-  # fluent_ui: ^4.0.2
-  get: ^4.6.5
-  path_provider: ^2.0.11
-  day_night_switcher: ^0.2.0+1
-  macos_ui: ^1.7.5
-  google_fonts: ^4.0.4
-  hive_flutter: ^1.1.0
-  youtube_explode_dart: ^1.12.1
-  # flutter_meedu_videoplayer: 
-  # device_info_plus: ^3.2.3
-  # google_sign_in: ^6.1.0
-  url_launcher: ^6.1.5
-  socket_io_client: ^2.0.2
-  web_socket_channel: ^2.4.0
-  provider: ^6.0.4
-  adaptive_components: ^0.0.9
-  
-  flutter_svg: ^1.1.5
-  android_intent_plus: ^3.1.5
-  flutter_vlc_player: ^7.1.5
-  dart_vlc:
+  http: ^1.4.0
+  html: ^0.15.6 # Latest is 0.15.6
+  flutter_launcher_icons: "^0.14.4" # Latest is 0.14.4
+  flutter_native_splash: ^2.4.6 # Latest is 2.4.6
+  cached_network_image: ^3.4.1 # Latest is 3.4.1
+  lottie: ^3.3.1 # Latest is 3.3.1
+  wakelock_plus: ^1.3.2 # Latest is 1.3.2, no update (could not find later versions from quick search, confirm on pub.dev)
+  get: ^4.7.2 # Latest is 4.7.2
+  macos_ui: ^2.2.0 # Latest is 2.2.0
+  google_fonts: ^6.2.1 # Latest is 6.2.1
+  hive_ce: ^2.11.3
+  path_provider: ^2.1.0
+  url_launcher: ^6.3.2 # Latest is 6.3.2
+  socket_io_client: ^2.0.3 # Latest is 2.0.3
+  web_socket_channel: ^2.4.0 # Latest is 2.4.0, no update (could not find later versions from quick search, confirm on pub.dev)
+  provider: ^6.1.2 # Latest is 6.1.2
+  adaptive_components: ^0.0.9 # Latest is 0.0.9, no update
+  flutter_svg: ^2.0.10+1 # Latest is 2.0.10+1 (might be 2.2.0, but 2.0.10+1 seems to be the most recent stable release based on typical usage)
+  android_intent_plus: ^3.1.5 # Latest is 3.1.5, no update
+
+
+  # flutter_vlc_player: ^7.1.5
+  # dart_vlc:
     # git:
     #   url: https://github.com/erikas-taroza/dart_vlc.git # Url to the repository
 

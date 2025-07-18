@@ -3,457 +3,421 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/container.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
-import 'package:html/parser.dart';
-import 'package:http/http.dart';
-import 'package:seedr_app/constants.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 import 'package:seedr_app/pages/AddMagnet.dart';
 import 'package:seedr_app/pages/AllFiles.dart';
-import 'package:seedr_app/pages/HomePage.dart';
-import 'package:seedr_app/pages/LoginScreen.dart';
-import 'package:seedr_app/pages/SearchTMDB.dart';
-import 'package:seedr_app/utils.dart';
+import 'package:seedr_app/pages/LoginScreen.dart'; // For path joining
 
-var boxLogin = Hive.box("login_info");
+// --- Helper class for unified torrent data ---
+
+class TorrentResult {
+  final String title;
+  final String source;
+  final double sizeGB;
+  final int seeders;
+  final int leechers;
+  final String? magnetUrl;
+  final String? infoHash;
+  final String? detailsUrl; // For sources that need a second lookup
+
+  TorrentResult({
+    required this.title,
+    required this.source,
+    required this.sizeGB,
+    required this.seeders,
+    required this.leechers,
+    this.magnetUrl,
+    this.infoHash,
+    this.detailsUrl,
+  });
+
+  // A computed property to get a usable magnet link
+  String get magnet {
+    if (magnetUrl != null && magnetUrl!.startsWith("magnet:")) {
+      return magnetUrl!;
+    }
+    if (infoHash != null) {
+      return 'magnet:?xt=urn:btih:$infoHash&dn=${Uri.encodeComponent(title)}';
+    }
+    return "";
+  }
+}
+
+// --- Main Search Page Implementation ---
 
 class SearchPage extends StatefulWidget {
-  final switchTheme;
-  const SearchPage({this.switchTheme});
+  final Widget? switchTheme;
+  const SearchPage({Key? key, this.switchTheme}) : super(key: key);
 
   @override
   State<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage>
-    with SingleTickerProviderStateMixin {
-  TextEditingController nameController = TextEditingController();
+class _SearchPageState extends State<SearchPage> {
+  final TextEditingController _searchController = TextEditingController();
+  final List<TorrentResult> _torrents = [];
+  bool _isLoading = false;
+  String _message = "Search for movies, series, and more...";
+  var boxLogin = Hive.box("login_info");
 
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void dispose() {
-    nameController.dispose();
-    super.dispose();
-  }
-
-  TabController? _tabController;
   @override
   void initState() {
-    _tabController = new TabController(length: 2, vsync: this);
     super.initState();
+    _checkLogin();
   }
 
-  bool showProg = false;
-  var torrentCards337x = <Container>[];
-  var torrentCardsall = <Container>[];
-
-  Container renderTorrent(name, subtitle, onTap) {
-    return Container(
-        child: GestureDetector(
-      onTap: onTap,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
-              Text(
-                name,
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              Text(
-                subtitle,
-              )
-            ],
-          ),
-        ),
-      ),
-    ));
-  }
-
-  Future loadSearch(qry) async {
-    torrentCards337x = <Container>[];
-    torrentCardsall = <Container>[];
-    var connected = await checkUserConnection();
-
-    if (connected) {
-      var uri_1337x =
-          "https://1337x.to/sort-search/${Uri.encodeComponent(qry)}/time/desc/1/";
-
-      var xData1337 = await get(Uri.parse(
-          "https://scrap.torrentdev.workers.dev/?url=${Uri.encodeComponent(uri_1337x)}&selector=tr"));
-
-      var details = {
-        "query": qry,
-        "type": "search",
-      };
-      var one337 = jsonDecode(xData1337.body);
-
-      one337 = one337["result"];
-
-      try {
-        final responseSandr = await post(
-          Uri.parse('http://sand.aejx.in/deepSearch'),
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          encoding: Encoding.getByName('utf-8'),
-          body: details,
-        );
-
-        var sandrs = jsonDecode(responseSandr.body);
-        sandrs = sandrs["torrents"];
-
-        sandrs.forEach((s) {
-          var GB = s['size'].contains('GB') ? true : false;
-
-          var size;
-
-          // print(s["title"] + " "  + size.toString());
-
-          try {
-            size = s['size'].substring(0, s['size'].length - 2);
-            size = double.parse(size);
-          } catch (ex) {
-            print(ex);
-            size = 0;
-          }
-
-          if (!GB || (GB && size <= 4.0)) {
-            torrentCardsall.add(renderTorrent(s["title"],
-                'Seeds:' + s['seeds'] + ' | ' + s['source'] + ' | ' + s['size'],
-                () {
-              changePageTo(context, AddMagnet(magnet: s['magnet']), false);
-            }));
-          }
-        });
-      } catch (ex) {
-      torrentCardsall.add(Container(
-        child: Text("Server Error"),
-      ));
-      }
-
-      one337.forEach((element) {
-        var snip = element["text"].split("\n");
-        var html = element["innerHTML"];
-
-        var post = parse(html);
-
-        var name = snip[1];
-        var href = '';
-        try {
-          href = post.getElementsByTagName('a')[1].attributes['href'] ?? "";
-        } catch (ex) {
-          href = "";
-        }
-        var seeds = snip[2];
-        var ssiss = snip[5].substring(0, snip[5].indexOf('B') + 1);
-        var size;
-
-        try {
-          size = ssiss.substring(0, ssiss.length - 2);
-
-          size = double.parse(size);
-        } catch (ex) {
-          size = 0;
-        }
-
-        var GB = ssiss.contains('GB') ? true : false;
-
-        var uploader = snip[6];
-        var datae = snip[4];
-
-        if ((!GB || (GB && size <= 2.0)) && size != 0) {
-          torrentCards337x.add(renderTorrent(name,
-              "Seeds - $seeds | Size - $ssiss | Uploaded by - $uploader | $datae",
-              () async {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (BuildContext context) {
-                return Dialog(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text("Loading"),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-
-            print(href);
-            var data = await get(Uri.parse(
-                "https://scrap.torrentdev.workers.dev/?url=https://1337x.to$href&selector=body"));
-            var gotData = jsonDecode(data.body);
-            var doc = parse(gotData["result"][0]["innerHTML"]);
-
-            var magnet =
-                doc.querySelector('.clearfix ul li a')?.attributes['href'] ??
-                    "";
-
-            Navigator.pop(context);
-
-            changePageTo(context, AddMagnet(magnet: magnet), false);
-          }));
-        }
+  void _checkLogin() {
+    // This is a good place to check if the user is logged in
+    // and redirect if necessary.
+    final user = boxLogin.get("user");
+    if (user == null || user.isEmpty) {
+      // Use WidgetsBinding to ensure navigation happens after the build cycle
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+            builder: (context) =>
+                LoginScreen(switchTheme: widget.switchTheme)));
       });
+    }
+  }
 
-      //  print(sandrs);
+  Future<void> _handleLogout() async {
+    await boxLogin.clear();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+          builder: (context) => LoginScreen(switchTheme: widget.switchTheme)),
+      (Route<dynamic> route) => false,
+    );
+  }
+
+  Future<void> _search() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _isLoading = true;
+      _torrents.clear();
+      _message = "Searching...";
+    });
+
+    try {
+      final List<TorrentResult> combinedResults = [];
+
+      // --- API Calls ---
+      // Use Future.wait to run all searches in parallel for better performance
+      await Future.wait([
+        _searchKnaben(query, combinedResults),
+        _searchApiBay(query, combinedResults),
+        _searchTorrentio(query, combinedResults),
+      ]);
+
+      // Sort results by seeders (descending)
+      combinedResults.sort((a, b) => b.seeders.compareTo(a.seeders));
+
+      // Filter results by size
+      _torrents
+          .addAll(combinedResults.where((torrent) => torrent.sizeGB <= 5.0));
 
       setState(() {
-        showProg = false;
+        if (_torrents.isEmpty) {
+          _message = "No results found for '$query'.";
+        }
       });
+    } catch (e) {
+      setState(() {
+        _message = "An error occurred. Please try again.";
+      });
+      Get.snackbar("Error", "Failed to fetch torrents: ${e.toString()}",
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // --- Individual API Search Functions ---
+
+  Future<void> _searchKnaben(String query, List<TorrentResult> results) async {
+    final response = await http.post(
+      Uri.parse('https://api.knaben.org/v1'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({"search_field": "title", "query": query}),
+    );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['hits'] != null) {
+        for (var hit in data['hits']) {
+          double sizeGB = (hit['bytes'] ?? 0) / (1024 * 1024 * 1024);
+          if (sizeGB > 0) {
+            results.add(TorrentResult(
+              title: hit['title'] ?? 'No Title',
+              source: hit['tracker'] ?? 'Knaben',
+              sizeGB: sizeGB,
+              seeders: hit['seeders'] ?? 0,
+              leechers: hit['peers'] ?? 0,
+              magnetUrl: hit['magnetUrl'],
+              detailsUrl: hit['details'],
+            ));
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> _searchApiBay(String query, List<TorrentResult> results) async {
+    final response =
+        await http.get(Uri.parse('https://apibay.org/q.php?q=$query&cat=0'));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      for (var hit in data) {
+        // Apibay might return a "0" id for no results
+        if (hit['id'] != '0') {
+          double sizeGB =
+              double.tryParse(hit['size'].toString())! / (1024 * 1024 * 1024);
+          if (sizeGB > 0) {
+            results.add(TorrentResult(
+              title: hit['name'] ?? 'No Title',
+              source: 'The Pirate Bay',
+              sizeGB: sizeGB,
+              seeders: int.tryParse(hit['seeders'].toString()) ?? 0,
+              leechers: int.tryParse(hit['leechers'].toString()) ?? 0,
+              infoHash: hit['info_hash'],
+            ));
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> _searchTorrentio(
+      String query, List<TorrentResult> results) async {
+    String? imdbId;
+    // First, get IMDb ID from Cinemeta
+    final cinemetaRes = await http.get(Uri.parse(
+        'https://v3-cinemeta.strem.io/catalog/movie/top/search=$query.json'));
+    if (cinemetaRes.statusCode == 200) {
+      final cinemetaData = json.decode(cinemetaRes.body);
+      if (cinemetaData['metas'] != null && cinemetaData['metas'].isNotEmpty) {
+        imdbId = cinemetaData['metas'][0]['imdb_id'];
+      }
+    }
+
+    if (imdbId != null) {
+      final torrentioRes = await http.get(Uri.parse(
+          'https://torrentio.strem.fun/sort=seeders/stream/movie/$imdbId.json'));
+      if (torrentioRes.statusCode == 200) {
+        final data = json.decode(torrentioRes.body);
+        if (data['streams'] != null) {
+          for (var stream in data['streams']) {
+            // Torrentio provides size in a string, we need to parse it
+            Map<String, dynamic> details =
+                _parseTorrentioTitle(stream['title']);
+            results.add(TorrentResult(
+              title: stream['name'] ?? 'No Title',
+              source: 'Torrentio',
+              sizeGB: details['sizeGB'],
+              seeders: details['seeders'],
+              leechers: 0, // Not provided by Torrentio
+              infoHash: stream['infoHash'],
+            ));
+          }
+        }
+      }
+    }
+  }
+
+  // --- Helper to parse size/seeders from Torrentio's title string ---
+
+  Map<String, dynamic> _parseTorrentioTitle(String title) {
+    var sizeGB = 0.0;
+    var seeders = 0;
+
+    try {
+      final sizeMatch = RegExp(r'💾 (\d+\.?\d*) (\w+)').firstMatch(title);
+      if (sizeMatch != null) {
+        final sizeValue = double.parse(sizeMatch.group(1)!);
+        final sizeUnit = sizeMatch.group(2)!.toUpperCase();
+        if (sizeUnit == 'GB') {
+          sizeGB = sizeValue;
+        } else if (sizeUnit == 'MB') {
+          sizeGB = sizeValue / 1024;
+        }
+      }
+
+      final seedersMatch = RegExp(r'👤 (\d+)').firstMatch(title);
+      if (seedersMatch != null) {
+        seeders = int.parse(seedersMatch.group(1)!);
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+
+    return {'sizeGB': sizeGB, 'seeders': seeders};
+  }
+
+  Future<void> _addTorrent(TorrentResult torrent) async {
+    String magnet = torrent.magnet;
+    if (magnet.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => AddMagnet(magnet: magnet)),
+      );
     } else {
-      Get.snackbar("No Internet", "Please Check Network Connection",
-          icon: Icon(Icons.offline_bolt_rounded),
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white);
+      // Handle cases like 1337x where a second call is needed
+      Get.snackbar("Info", "Magnet link not found directly.",
+          backgroundColor: Colors.orange, colorText: Colors.white);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    var size = MediaQuery.of(context).size;
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      child: SafeArea(
-        child: Scaffold(
-          resizeToAvoidBottomInset: false,
-          body: LayoutBuilder(
-            builder: (context, constraints) {
-              return _buildMainBody(size);
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Main Body
-  Widget _buildMainBody(
-    Size size,
-  ) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Center(
-          //   child: Image.asset(
-          //     'assets/img/logo/splash_logo.png',
-          //     height: 200,
-          //   ),
-          // ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              widget.switchTheme != null ? widget.switchTheme : SizedBox(),
-              IconButton(
-                onPressed: () {
-                  boxLogin.delete("user");
-                  boxLogin.delete("pass");
-                  boxLogin.delete("token");
-                  changePageTo(context,
-                      LoginView(switchTheme: widget.switchTheme), true);
-                  // changePageTo(context, HomePage(), true);
-                },
-                icon: Icon(Icons.logout),
-                tooltip: "Logout",
-              ),
-              IconButton(
-                onPressed: () {
-                  changePageTo(context, AllFiles(), false);
-                },
-                icon: Icon(Icons.folder),
-                tooltip: "All Files",
-              ),
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.only(left: 20.0, top: 20),
-            child: Text(
-              'Seach.',
-              style: kLoginTitleStyle(size),
-            ),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 20.0),
-            child: Text(
-              'For Movies/Series 🍿',
-              style: kLoginSubtitleStyle(size),
-            ),
-          ),
-                    Padding(
-            padding: const EdgeInsets.only(left: 20.0,top: 10),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                primary: Colors.deepPurpleAccent,
-                onPrimary: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-              onPressed: (){
-                changePageTo(context, SearchTMLDB(), true);
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Search'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.folder_copy_outlined),
+              tooltip: "My Files",
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => AllFiles()));
               },
-              child: Text(
-                'Click here for TMDB Search',
-              ),
             ),
-          ),
-          SizedBox(
-            height: size.height * 0.03,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 20.0, right: 20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  /// username or Gmail
-                  TextFormField(
-                    // style: kTextFormFieldStyle(),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: 'Enter Your Query',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(15)),
-                      ),
-                    ),
-                    controller: nameController,
-                    // The validator receives the text that the user has entered.
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter search';
-                      } else if (value.length < 4) {
-                        return 'at least enter 4 characters';
-                      } else if (value.length > 26) {
-                        return 'maximum character is 26';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  SizedBox(
-                    height: size.height * 0.02,
-                  ),
-
-                  SizedBox(
-                    height: size.height * 0.02,
-                  ),
-
-                  /// searchButton Button
-                  searchButton(),
-
-                  torrentCards337x.isNotEmpty
-                      ? Padding(
-                          padding: EdgeInsets.all(8),
-                          child: DefaultTabController(
-                              length: 2,
-                              child: Column(children: [
-                                TabBar(
-                                  labelColor: Colors.red,
-                                  tabs: <Widget>[
-                                    Tab(
-                                      icon: Icon(Icons.tornado_rounded),
-                                      text: "1337x",
-                                    ),
-                                    Tab(
-                                      icon:
-                                          Icon(Icons.self_improvement_rounded),
-                                      text: "All Servers",
-                                    )
-                                  ],
-                                  controller: _tabController,
-                                  indicatorSize: TabBarIndicatorSize.tab,
-                                ),
-                                SizedBox(
-                                  height: 300,
-                                  child: TabBarView(
-                                    children: <Widget>[
-                                      SingleChildScrollView(
-                                        child: Column(
-                                          children: torrentCards337x,
-                                        ),
-                                      ),
-                                      SingleChildScrollView(
-                                        child: Column(
-                                          children: torrentCardsall,
-                                        ),
-                                      ),
-                                    ],
-                                    controller: _tabController,
-                                  ),
-                                ),
-                              ])),
-                        )
-                      : SizedBox(),
-
-                  SizedBox(
-                    height: size.height * 0.03,
-                  ),
-
-                  /// Navigate To Login Screen
-                ],
-              ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: "Logout",
+              onPressed: _handleLogout,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // searchButton Button
-  Widget searchButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton(
-        style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.all(Colors.deepPurpleAccent),
-          shape: MaterialStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-          ),
+          ],
         ),
-        onPressed: () {
-          // Validate returns true if the form is valid, or false otherwise.
-          if (_formKey.currentState!.validate()) {
-            setState(() {
-              showProg = true;
-            });
-            // ... Login To your Home Page
-            loadSearch(nameController.value.text);
-          }
-        },
-        child: Row(
+        body: Column(
           children: [
-            showProg
-                ? Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(),
-                  )
-                : SizedBox(),
-            const Text('Search'),
+            _buildSearchBar(),
+            Expanded(child: _buildResultsBody()),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: TextField(
+        controller: _searchController,
+        autofocus: false,
+        decoration: InputDecoration(
+          hintText: 'Search for anything...',
+          prefixIcon: const Icon(Icons.search),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30.0),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          contentPadding: EdgeInsets.zero,
+          fillColor: Theme.of(context).scaffoldBackgroundColor.withAlpha(200),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.send),
+            onPressed: _search,
+          ),
+        ),
+        onSubmitted: (_) => _search(),
+      ),
+    );
+  }
+
+  Widget _buildResultsBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_torrents.isEmpty) {
+      return Center(
+        child: Text(
+          _message,
+          style: TextStyle(color: Colors.grey[600]),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      itemCount: _torrents.length,
+      itemBuilder: (context, index) {
+        return _buildTorrentCard(_torrents[index]);
+      },
+    );
+  }
+
+  Widget _buildTorrentCard(TorrentResult torrent) {
+    return Card(
+      elevation: 2.0,
+      margin: const EdgeInsets.symmetric(vertical: 6.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _addTorrent(torrent),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                torrent.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.storage_rounded, size: 16),
+                    label: Text('${torrent.sizeGB.toStringAsFixed(2)} GB'),
+                    backgroundColor: Colors.blue.withOpacity(0.1),
+                  ),
+                  Chip(
+                    avatar: const Icon(Icons.public, size: 16),
+                    label: Text(torrent.source),
+                    backgroundColor: Colors.purple.withOpacity(0.1),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildStatIcon(Icons.arrow_upward_rounded,
+                      torrent.seeders.toString(), Colors.green),
+                  const SizedBox(width: 16),
+                  _buildStatIcon(Icons.arrow_downward_rounded,
+                      torrent.leechers.toString(), Colors.red),
+                  const Spacer(),
+                  const Icon(Icons.add_circle_outline, color: Colors.blue),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatIcon(IconData icon, String text, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 4),
+        Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

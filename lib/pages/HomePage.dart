@@ -9,7 +9,7 @@ import 'package:seedr_app/utils.dart';
 // import 'package:web_socket_channel/web_socket_channel.dart';
 // import 'package:web_socket_channel/status.dart' as status;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -97,7 +97,7 @@ class _HomePageState extends State<HomePage> {
           setState(() {
             _prog = data;
           });
-          if (_prog  > 99) {
+          if (_prog > 99) {
             print("$email");
             loginToSeedr(email, '@Blassddfd34@%^');
           }

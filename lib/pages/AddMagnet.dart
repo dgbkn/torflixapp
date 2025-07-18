@@ -8,13 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart';
 import 'package:process_run/process_run.dart';
 import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/pages/AllFiles.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
-import 'package:seedr_app/pages/nodejsutils.dart';
 import 'package:seedr_app/utils.dart';
 
 var boxLogin = Hive.box("login_info");
@@ -219,12 +218,6 @@ class _AddMagnetState extends State<AddMagnet> {
 
   @override
   void initState() {
-    if (Platform.isWindows && checkExecutable("peerflix")) {
-      peerflixUi = true;
-    } else {
-      addMagnet(widget.magnet);
-    }
-
     // addMagnet(widget.magnet);
     super.initState();
   }
