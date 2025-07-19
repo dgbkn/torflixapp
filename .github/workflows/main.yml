@@ -15,8 +15,9 @@ jobs:
 
       - uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
-          java-version: '12'
+          distribution: 'temurin'  # or 'zulu' if you prefer that vendor
+          java-version: '21.0.7'
+
 
       - uses: subosito/flutter-action@v2
         with:
