@@ -49,6 +49,7 @@ class _TamilMvPageState extends State<TamilMvPage> {
               print('Page resource error: ${error.description}');
             }
           },
+          onHttpError: (HttpResponseError error) {},
           onNavigationRequest: (NavigationRequest request) {
             if (request.url.startsWith('magnet:')) {
               Navigator.push(

@@ -2,8 +2,7 @@
 
 Want to Stream freely.This is the app for you 📺 🍿 😍
 
-<img width="1161" height="846" alt="image" src="https://github.com/user-attachments/assets/380e36ed-4671-4f3f-af55-587d4adfdbd2" />
-
+![Untitled](https://user-images.githubusercontent.com/65810521/196889872-c4c3dc4b-75bb-4750-9c56-9a9a34945c92.png)
 
 ## Getting Started
 1.Register on https://www.seedr.cc/ <br>

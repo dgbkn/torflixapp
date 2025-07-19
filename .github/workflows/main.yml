@@ -25,7 +25,7 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build apk --multidex
+      - run: flutter build apk
 
       - run: flutter build windows
 
