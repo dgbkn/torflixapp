@@ -25,14 +25,18 @@ jobs:
 
       - run: flutter pub get
 
-      - run: |
-         wget https://services.gradle.org/distributions/gradle-8.12-all.zip -O /home/gradle-8.12-all.zip
-         flutter build apk
+      - name: Set Gradle wrapper to use HTTPS URL
+        run: |
+          (Get-Content android/gradle/wrapper/gradle-wrapper.properties) -replace '^distributionUrl=.*', 'distributionUrl=https\\://services.gradle.org/distributions/gradle-8.12-all.zip' | Set-Content android/gradle/wrapper/gradle-wrapper.properties
+        shell: pwsh
+
+
+      - run: flutter build apk
 
       - run: flutter build windows
 
-      - name: Extract mpv files
-        run: 7z x mpc_paste_in_build.7z
+      # - name: Extract mpv files
+      #   run: 7z x mpc_paste_in_build.7z
 
       - name: Rename APK for release
         run: |

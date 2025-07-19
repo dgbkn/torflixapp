@@ -209,7 +209,6 @@ class _AllFilesState extends State<AllFiles> {
         action: 'action_view',
         data: url,
         type: 'video/*',
-        // By providing the package AND the explicit componentName, we prevent the app chooser.
         package: playerPackage,
         componentName: componentName,
         arguments: {'title': title},
@@ -226,6 +225,23 @@ class _AllFilesState extends State<AllFiles> {
             backgroundColor: Colors.orangeAccent,
             snackPosition: SnackPosition.BOTTOM);
       }
+    } else if (Platform.isWindows) {
+      try {
+        final vlcPath = r'C:\Program Files\VideoLAN\VLC\vlc.exe';
+        final result = await Process.start(vlcPath, [url], runInShell: true);
+        if (await result.exitCode != 0) {
+          throw Exception("VLC exited with error.");
+        }
+      } catch (e) {
+        Get.snackbar("Error Launching VLC",
+            "Failed to open VLC. Ensure it is installed at the default location.",
+            backgroundColor: Colors.redAccent,
+            snackPosition: SnackPosition.BOTTOM);
+      }
+    } else {
+      Get.snackbar("Unsupported OS",
+          "This feature currently supports only Android and Windows.",
+          backgroundColor: Colors.orange, snackPosition: SnackPosition.BOTTOM);
     }
   }
 
