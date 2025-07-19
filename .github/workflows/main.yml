@@ -25,7 +25,9 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build apk
+      - run: |
+         wget https://services.gradle.org/distributions/gradle-8.12-all.zip -O /home/gradle-8.12-all.zip
+         flutter build apk
 
       - run: flutter build windows
 
