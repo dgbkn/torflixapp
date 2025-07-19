@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/adapters.dart';
 import 'package:provider/provider.dart';
 import 'package:seedr_app/components/DayNightSwitcher.dart';
 
@@ -35,9 +36,9 @@ void main() async {
         .setTrustedCertificatesBytes(data.buffer.asUint8List());
   }
 
-// running stats in maincources.dart
-  await Hive.openBox('login_info'); //  name is totally up to you
-  //  name is totally up to you
+  await Hive.initFlutter();
+
+  await Hive.openBox('login_info');
 
   runApp(const SeedrApp());
 }

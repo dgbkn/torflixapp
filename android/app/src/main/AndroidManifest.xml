@@ -1,49 +1,46 @@
-<manifest
-  xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.example.seedr_app"
->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.seedr_app">
 
-     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- ⚙️ Permissions must be direct children of <manifest> -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-   <application
-    android:label="Torflix"
-    android:name="${applicationName}"
-    android:usesCleartextTraffic="true"
-    android:icon="@mipmap/ic_launcher"
-  >
+    <application
+        android:name="${applicationName}"
+        android:label="Torflix"
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+
+        <!-- Required for Flutter embedding v2 -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+
         <activity
-      android:name=".MainActivity"
-      android:resizeableActivity="true"
-      android:exported="true"
-      android:launchMode="singleTop"
-      android:theme="@style/LaunchTheme"
-      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-      android:hardwareAccelerated="true"
-      android:windowSoftInputMode="adjustResize"
-    >
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:resizeableActivity="true"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
             <meta-data
-        android:name="io.flutter.embedding.android.NormalTheme"
-        android:resource="@style/NormalTheme"
-      />
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-                <meta-data android:name="flutterEmbedding" android:value="2" />
-                
-            
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
-        <meta-data android:name="flutterEmbedding" android:value="2" />
-         <meta-data
-      android:name="android.allow_multiple_resumed_activities"
-      android:value="true" />
+
+        <!-- Additional app-level metadata, if any -->
+        <meta-data
+            android:name="android.allow_multiple_resumed_activities"
+            android:value="true" />
+
     </application>
 </manifest>

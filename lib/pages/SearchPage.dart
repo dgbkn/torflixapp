@@ -6,12 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:seedr_app/pages/AddMagnet.dart';
 import 'package:seedr_app/pages/AllFiles.dart';
-import 'package:seedr_app/pages/LoginScreen.dart'; // For path joining
-
-// --- Helper class for unified torrent data ---
+import 'package:seedr_app/pages/LoginScreen.dart';
 
 class TorrentResult {
   final String title;
@@ -21,7 +20,9 @@ class TorrentResult {
   final int leechers;
   final String? magnetUrl;
   final String? infoHash;
-  final String? detailsUrl; // For sources that need a second lookup
+  final String? detailsUrl;
+  final String? resolution;
+  final DateTime? publishedDate;
 
   TorrentResult({
     required this.title,
@@ -32,9 +33,10 @@ class TorrentResult {
     this.magnetUrl,
     this.infoHash,
     this.detailsUrl,
+    this.resolution,
+    this.publishedDate,
   });
 
-  // A computed property to get a usable magnet link
   String get magnet {
     if (magnetUrl != null && magnetUrl!.startsWith("magnet:")) {
       return magnetUrl!;
@@ -46,8 +48,6 @@ class TorrentResult {
   }
 }
 
-// --- Main Search Page Implementation ---
-
 class SearchPage extends StatefulWidget {
   final Widget? switchTheme;
   const SearchPage({Key? key, this.switchTheme}) : super(key: key);
@@ -56,11 +56,15 @@ class SearchPage extends StatefulWidget {
   State<SearchPage> createState() => _SearchPageState();
 }
 
+enum SortOption { seeders, size, date }
+
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  final List<TorrentResult> _torrents = [];
+  List<TorrentResult> _allResults = [];
+  Map<String, List<TorrentResult>> _groupedTorrents = {};
   bool _isLoading = false;
   String _message = "Search for movies, series, and more...";
+  SortOption _currentSort = SortOption.seeders;
   var boxLogin = Hive.box("login_info");
 
   @override
@@ -70,11 +74,8 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _checkLogin() {
-    // This is a good place to check if the user is logged in
-    // and redirect if necessary.
     final user = boxLogin.get("user");
     if (user == null || user.isEmpty) {
-      // Use WidgetsBinding to ensure navigation happens after the build cycle
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pushReplacement(MaterialPageRoute(
             builder: (context) =>
@@ -99,30 +100,25 @@ class _SearchPageState extends State<SearchPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _isLoading = true;
-      _torrents.clear();
-      _message = "Searching...";
+      _allResults.clear();
+      _groupedTorrents.clear();
+      _message = "Searching across sources...";
     });
 
     try {
       final List<TorrentResult> combinedResults = [];
-
-      // --- API Calls ---
-      // Use Future.wait to run all searches in parallel for better performance
       await Future.wait([
         _searchKnaben(query, combinedResults),
         _searchApiBay(query, combinedResults),
         _searchTorrentio(query, combinedResults),
       ]);
 
-      // Sort results by seeders (descending)
-      combinedResults.sort((a, b) => b.seeders.compareTo(a.seeders));
-
-      // Filter results by size
-      _torrents
-          .addAll(combinedResults.where((torrent) => torrent.sizeGB <= 5.0));
+      _allResults =
+          combinedResults.where((torrent) => torrent.sizeGB <= 5.0).toList();
+      _processAndSortResults();
 
       setState(() {
-        if (_torrents.isEmpty) {
+        if (_allResults.isEmpty) {
           _message = "No results found for '$query'.";
         }
       });
@@ -139,124 +135,191 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  // --- Individual API Search Functions ---
+  void _processAndSortResults() {
+    Map<String, List<TorrentResult>> grouped = {};
+    for (var torrent in _allResults) {
+      String sourceName = torrent.source.split(' | ')[0];
+      if (grouped.containsKey(sourceName)) {
+        grouped[sourceName]!.add(torrent);
+      } else {
+        grouped[sourceName] = [torrent];
+      }
+    }
+
+    grouped.forEach((source, torrents) {
+      torrents.sort((a, b) {
+        switch (_currentSort) {
+          case SortOption.size:
+            return b.sizeGB.compareTo(a.sizeGB);
+          case SortOption.date:
+            if (a.publishedDate == null && b.publishedDate == null) return 0;
+            if (a.publishedDate == null) return 1;
+            if (b.publishedDate == null) return -1;
+            return b.publishedDate!.compareTo(a.publishedDate!);
+          case SortOption.seeders:
+          default:
+            return b.seeders.compareTo(a.seeders);
+        }
+      });
+    });
+    setState(() {
+      _groupedTorrents = grouped;
+    });
+  }
 
   Future<void> _searchKnaben(String query, List<TorrentResult> results) async {
-    final response = await http.post(
-      Uri.parse('https://api.knaben.org/v1'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({"search_field": "title", "query": query}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['hits'] != null) {
-        for (var hit in data['hits']) {
-          double sizeGB = (hit['bytes'] ?? 0) / (1024 * 1024 * 1024);
-          if (sizeGB > 0) {
-            results.add(TorrentResult(
-              title: hit['title'] ?? 'No Title',
-              source: hit['tracker'] ?? 'Knaben',
-              sizeGB: sizeGB,
-              seeders: hit['seeders'] ?? 0,
-              leechers: hit['peers'] ?? 0,
-              magnetUrl: hit['magnetUrl'],
-              detailsUrl: hit['details'],
-            ));
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.knaben.org/v1'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({"search_field": "title", "query": query}),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['hits'] != null) {
+          for (var hit in data['hits']) {
+            double sizeGB = (hit['bytes'] ?? 0) / (1024 * 1024 * 1024);
+            if (sizeGB > 0) {
+              results.add(TorrentResult(
+                title: hit['title'] ?? 'No Title',
+                source: hit['tracker'] ?? 'Knaben',
+                sizeGB: sizeGB,
+                seeders: hit['seeders'] ?? 0,
+                leechers: hit['peers'] ?? 0,
+                magnetUrl: hit['magnetUrl'],
+                detailsUrl: hit['details'],
+                publishedDate: hit['time'] != null
+                    ? DateTime.fromMillisecondsSinceEpoch(hit['time'] * 1000)
+                    : null,
+              ));
+            }
           }
         }
       }
-    }
+    } catch (_) {}
   }
 
   Future<void> _searchApiBay(String query, List<TorrentResult> results) async {
-    final response =
-        await http.get(Uri.parse('https://apibay.org/q.php?q=$query&cat=0'));
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      for (var hit in data) {
-        // Apibay might return a "0" id for no results
-        if (hit['id'] != '0') {
-          double sizeGB =
-              double.tryParse(hit['size'].toString())! / (1024 * 1024 * 1024);
-          if (sizeGB > 0) {
-            results.add(TorrentResult(
-              title: hit['name'] ?? 'No Title',
-              source: 'The Pirate Bay',
-              sizeGB: sizeGB,
-              seeders: int.tryParse(hit['seeders'].toString()) ?? 0,
-              leechers: int.tryParse(hit['leechers'].toString()) ?? 0,
-              infoHash: hit['info_hash'],
-            ));
+    try {
+      final response =
+          await http.get(Uri.parse('https://apibay.org/q.php?q=$query&cat=0'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        for (var hit in data) {
+          if (hit['id'] != '0') {
+            double sizeGB =
+                double.tryParse(hit['size'].toString())! / (1024 * 1024 * 1024);
+            if (sizeGB > 0) {
+              results.add(TorrentResult(
+                title: hit['name'] ?? 'No Title',
+                source: 'The Pirate Bay',
+                sizeGB: sizeGB,
+                seeders: int.tryParse(hit['seeders'].toString()) ?? 0,
+                leechers: int.tryParse(hit['leechers'].toString()) ?? 0,
+                infoHash: hit['info_hash'],
+                publishedDate: hit['added'] != null
+                    ? DateTime.fromMillisecondsSinceEpoch(
+                        int.parse(hit['added']) * 1000)
+                    : null,
+              ));
+            }
           }
         }
       }
-    }
+    } catch (_) {}
   }
 
   Future<void> _searchTorrentio(
       String query, List<TorrentResult> results) async {
-    String? imdbId;
-    // First, get IMDb ID from Cinemeta
-    final cinemetaRes = await http.get(Uri.parse(
-        'https://v3-cinemeta.strem.io/catalog/movie/top/search=$query.json'));
-    if (cinemetaRes.statusCode == 200) {
-      final cinemetaData = json.decode(cinemetaRes.body);
-      if (cinemetaData['metas'] != null && cinemetaData['metas'].isNotEmpty) {
-        imdbId = cinemetaData['metas'][0]['imdb_id'];
+    try {
+      String? imdbId;
+      final cinemetaRes = await http.get(Uri.parse(
+          'https://v3-cinemeta.strem.io/catalog/movie/top/search=$query.json'));
+      if (cinemetaRes.statusCode == 200) {
+        final cinemetaData = json.decode(cinemetaRes.body);
+        if (cinemetaData['metas'] != null && cinemetaData['metas'].isNotEmpty) {
+          imdbId = cinemetaData['metas'][0]['imdb_id'];
+        }
       }
-    }
-
-    if (imdbId != null) {
-      final torrentioRes = await http.get(Uri.parse(
-          'https://torrentio.strem.fun/sort=seeders/stream/movie/$imdbId.json'));
-      if (torrentioRes.statusCode == 200) {
-        final data = json.decode(torrentioRes.body);
-        if (data['streams'] != null) {
-          for (var stream in data['streams']) {
-            // Torrentio provides size in a string, we need to parse it
-            Map<String, dynamic> details =
-                _parseTorrentioTitle(stream['title']);
-            results.add(TorrentResult(
-              title: stream['name'] ?? 'No Title',
-              source: 'Torrentio',
-              sizeGB: details['sizeGB'],
-              seeders: details['seeders'],
-              leechers: 0, // Not provided by Torrentio
-              infoHash: stream['infoHash'],
-            ));
+      if (imdbId != null) {
+        final torrentioRes = await http.get(Uri.parse(
+            'https://torrentio.strem.fun/sort=seeders/stream/movie/$imdbId.json'));
+        if (torrentioRes.statusCode == 200) {
+          final data = json.decode(torrentioRes.body);
+          if (data['streams'] != null) {
+            for (var stream in data['streams']) {
+              Map<String, dynamic> details = _parseTorrentioStreamDetails(
+                rawName: stream['name'] ?? '',
+                rawTitle: stream['title'] ?? '',
+                infoHash: stream['infoHash'],
+              );
+              results.add(TorrentResult(
+                title: details['title'],
+                source: 'Torrentio | ' + details['source'],
+                sizeGB: details['sizeGB'],
+                seeders: details['seeders'],
+                leechers: 0,
+                infoHash: stream['infoHash'],
+                magnetUrl: details['magnetUrl'],
+                resolution: details['resolution'],
+                publishedDate: null,
+              ));
+            }
           }
         }
       }
-    }
+    } catch (_) {}
   }
 
-  // --- Helper to parse size/seeders from Torrentio's title string ---
+  Map<String, dynamic> _parseTorrentioStreamDetails({
+    required String rawName,
+    required String rawTitle,
+    String? infoHash,
+  }) {
+    String title = rawTitle;
+    String? resolution;
+    int seeders = 0;
+    double sizeGB = 0.0;
+    String source = 'Unknown';
+    String? magnetUrl;
 
-  Map<String, dynamic> _parseTorrentioTitle(String title) {
-    var sizeGB = 0.0;
-    var seeders = 0;
-
-    try {
-      final sizeMatch = RegExp(r'💾 (\d+\.?\d*) (\w+)').firstMatch(title);
-      if (sizeMatch != null) {
-        final sizeValue = double.parse(sizeMatch.group(1)!);
-        final sizeUnit = sizeMatch.group(2)!.toUpperCase();
-        if (sizeUnit == 'GB') {
-          sizeGB = sizeValue;
-        } else if (sizeUnit == 'MB') {
-          sizeGB = sizeValue / 1024;
-        }
+    if (rawName.contains('\n')) {
+      List<String> nameParts = rawName.split('\n');
+      if (nameParts.length > 1) {
+        resolution = nameParts[1].trim();
       }
+    }
+    RegExp detailsRegex =
+        RegExp(r'👤 (\d+)\s*💾 ([\d.]+ GB|[\d.]+ MB)\s*⚙️ (.+)');
+    Match? detailsMatch = detailsRegex.firstMatch(rawTitle);
 
-      final seedersMatch = RegExp(r'👤 (\d+)').firstMatch(title);
-      if (seedersMatch != null) {
-        seeders = int.parse(seedersMatch.group(1)!);
+    if (detailsMatch != null) {
+      title = rawTitle.substring(0, detailsMatch.start).trim();
+      seeders = int.tryParse(detailsMatch.group(1) ?? '0') ?? 0;
+      String rawSize = detailsMatch.group(2) ?? '0 GB';
+      source = detailsMatch.group(3)?.trim() ?? 'Unknown';
+
+      if (rawSize.endsWith('GB')) {
+        sizeGB = double.tryParse(rawSize.replaceAll(' GB', '')) ?? 0.0;
+      } else if (rawSize.endsWith('MB')) {
+        sizeGB =
+            (double.tryParse(rawSize.replaceAll(' MB', '')) ?? 0.0) / 1024.0;
       }
-    } catch (e) {
-      // Ignore parsing errors
     }
 
-    return {'sizeGB': sizeGB, 'seeders': seeders};
+    if (infoHash != null && infoHash.isNotEmpty) {
+      String encodedTitle = Uri.encodeComponent(title);
+      magnetUrl = 'magnet:?xt=urn:btih:$infoHash&dn=$encodedTitle';
+    }
+
+    return {
+      'title': title,
+      'resolution': resolution,
+      'seeders': seeders,
+      'sizeGB': sizeGB,
+      'source': source,
+      'magnetUrl': magnetUrl,
+    };
   }
 
   Future<void> _addTorrent(TorrentResult torrent) async {
@@ -267,7 +330,6 @@ class _SearchPageState extends State<SearchPage> {
         MaterialPageRoute(builder: (context) => AddMagnet(magnet: magnet)),
       );
     } else {
-      // Handle cases like 1337x where a second call is needed
       Get.snackbar("Info", "Magnet link not found directly.",
           backgroundColor: Colors.orange, colorText: Colors.white);
     }
@@ -279,7 +341,7 @@ class _SearchPageState extends State<SearchPage> {
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Search'),
+          title: const Text('Search Torrents'),
           actions: [
             IconButton(
               icon: const Icon(Icons.folder_copy_outlined),
@@ -298,7 +360,7 @@ class _SearchPageState extends State<SearchPage> {
         ),
         body: Column(
           children: [
-            _buildSearchBar(),
+            _buildSearchBarAndFilter(),
             Expanded(child: _buildResultsBody()),
           ],
         ),
@@ -306,29 +368,69 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBarAndFilter() {
     return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: TextField(
-        controller: _searchController,
-        autofocus: false,
-        decoration: InputDecoration(
-          hintText: 'Search for anything...',
-          prefixIcon: const Icon(Icons.search),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
-            borderSide: BorderSide.none,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            autofocus: false,
+            decoration: InputDecoration(
+              hintText: 'Search for anything...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30.0),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+              fillColor:
+                  Theme.of(context).scaffoldBackgroundColor.withAlpha(200),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: _search,
+              ),
+            ),
+            onSubmitted: (_) => _search(),
           ),
-          filled: true,
-          contentPadding: EdgeInsets.zero,
-          fillColor: Theme.of(context).scaffoldBackgroundColor.withAlpha(200),
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: _search,
-          ),
-        ),
-        onSubmitted: (_) => _search(),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSortChip(SortOption.seeders, "Seeders", Icons.people),
+              _buildSortChip(SortOption.size, "Size", Icons.storage_rounded),
+              _buildSortChip(SortOption.date, "Date", Icons.calendar_today),
+            ],
+          )
+        ],
       ),
+    );
+  }
+
+  Widget _buildSortChip(SortOption option, String label, IconData icon) {
+    bool isSelected = _currentSort == option;
+    return ChoiceChip(
+      label: Text(label),
+      avatar: Icon(icon,
+          size: 16,
+          color: isSelected
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurface),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _currentSort = option;
+          });
+          _processAndSortResults();
+        }
+      },
+      selectedColor: Theme.of(context).colorScheme.primary,
+      labelStyle: TextStyle(
+          color: isSelected
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurface),
     );
   }
 
@@ -336,7 +438,7 @@ class _SearchPageState extends State<SearchPage> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_torrents.isEmpty) {
+    if (_groupedTorrents.isEmpty) {
       return Center(
         child: Text(
           _message,
@@ -345,68 +447,97 @@ class _SearchPageState extends State<SearchPage> {
         ),
       );
     }
+
+    var sources = _groupedTorrents.keys.toList();
+
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      itemCount: _torrents.length,
+      padding: const EdgeInsets.all(8.0),
+      itemCount: sources.length,
       itemBuilder: (context, index) {
-        return _buildTorrentCard(_torrents[index]);
+        String source = sources[index];
+        List<TorrentResult> torrents = _groupedTorrents[source]!;
+
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          child: ExpansionTile(
+            title: Text(source,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text("${torrents.length} results found"),
+            initiallyExpanded: true,
+            children:
+                torrents.map((torrent) => _buildTorrentTile(torrent)).toList(),
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+          ),
+        );
       },
     );
   }
 
-  Widget _buildTorrentCard(TorrentResult torrent) {
-    return Card(
-      elevation: 2.0,
-      margin: const EdgeInsets.symmetric(vertical: 6.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _addTorrent(torrent),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                torrent.title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Chip(
-                    avatar: const Icon(Icons.storage_rounded, size: 16),
-                    label: Text('${torrent.sizeGB.toStringAsFixed(2)} GB'),
-                    backgroundColor: Colors.blue.withOpacity(0.1),
-                  ),
-                  Chip(
-                    avatar: const Icon(Icons.public, size: 16),
-                    label: Text(torrent.source),
-                    backgroundColor: Colors.purple.withOpacity(0.1),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildStatIcon(Icons.arrow_upward_rounded,
-                      torrent.seeders.toString(), Colors.green),
-                  const SizedBox(width: 16),
-                  _buildStatIcon(Icons.arrow_downward_rounded,
-                      torrent.leechers.toString(), Colors.red),
-                  const Spacer(),
-                  const Icon(Icons.add_circle_outline, color: Colors.blue),
-                ],
-              )
-            ],
-          ),
+  Widget _buildTorrentTile(TorrentResult torrent) {
+    return InkWell(
+      onTap: () => _addTorrent(torrent),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              torrent.title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatChip(Icons.storage_rounded,
+                    '${torrent.sizeGB.toStringAsFixed(2)} GB', Colors.blue),
+                if (torrent.publishedDate != null)
+                  _buildStatChip(
+                      Icons.calendar_today,
+                      DateFormat.yMMMd().format(torrent.publishedDate!),
+                      Colors.purple),
+                if (torrent.resolution != null)
+                  _buildStatChip(Icons.hd, torrent.resolution!, Colors.orange),
+              ],
+            ),
+            const Divider(height: 20),
+            Row(
+              children: [
+                _buildStatIcon(Icons.arrow_upward_rounded,
+                    torrent.seeders.toString(), Colors.green.shade600),
+                const SizedBox(width: 20),
+                _buildStatIcon(Icons.arrow_downward_rounded,
+                    torrent.leechers.toString(), Colors.red.shade600),
+                const Spacer(),
+                const Icon(Icons.add_circle_outline, color: Colors.blue),
+              ],
+            )
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatChip(IconData icon, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.w600, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -416,7 +547,7 @@ class _SearchPageState extends State<SearchPage> {
       children: [
         Icon(icon, color: color, size: 18),
         const SizedBox(width: 4),
-        Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+        Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
       ],
     );
   }

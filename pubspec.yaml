@@ -42,13 +42,12 @@ dependencies:
   hive_ce: ^2.11.3
   path_provider: ^2.1.0
   url_launcher: ^6.3.2 # Latest is 6.3.2
-  socket_io_client: ^2.0.3 # Latest is 2.0.3
-  web_socket_channel: ^2.4.0 # Latest is 2.4.0, no update (could not find later versions from quick search, confirm on pub.dev)
+  socket_io_client: ^3.1.2 # Latest is 2.0.3
+  web_socket_channel: ^3.0.3 # Latest is 2.4.0, no update (could not find later versions from quick search, confirm on pub.dev)
   provider: ^6.1.2 # Latest is 6.1.2
   adaptive_components: ^0.0.9 # Latest is 0.0.9, no update
   flutter_svg: ^2.0.10+1 # Latest is 2.0.10+1 (might be 2.2.0, but 2.0.10+1 seems to be the most recent stable release based on typical usage)
-  android_intent_plus: ^3.1.5 # Latest is 3.1.5, no update
-
+  android_intent_plus: ^5.3.0 # Latest is 3.1.5, no update
 
   # flutter_vlc_player: ^7.1.5
   # dart_vlc:
@@ -59,7 +58,10 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
-  process_run: ^0.13.1
+  process_run: ^1.2.4
+  hive_ce_flutter: ^2.3.1
+  intl: ^0.20.2
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -70,7 +72,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

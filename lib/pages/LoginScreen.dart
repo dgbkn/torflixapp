@@ -1,20 +1,19 @@
 import 'dart:convert';
-import 'dart:io';
-
+import 'dart:ui'; // Required for BackdropFilter
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart';
-import 'package:lottie/lottie.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
 import 'package:seedr_app/utils.dart';
-
+// import 'package:lottie/lottie.dart'; // Lottie is no longer needed
+import 'package:seedr_app/pages/SearchPage.dart';
+import 'package:seedr_app/utils.dart';
 import '../constants.dart';
 import '../controller/simple_ui_controller.dart';
 
 class LoginScreen extends StatefulWidget {
-  final switchTheme;
+  final dynamic switchTheme; // Kept as 'dynamic' to match original param
 
   const LoginScreen({Key? key, required this.switchTheme}) : super(key: key);
 
@@ -24,7 +23,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   TextEditingController nameController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
+  // Email controller was unused in the logic, so it is commented out but kept for reference
+  // TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
@@ -32,13 +32,14 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     nameController.dispose();
-    emailController.dispose();
+    // emailController.dispose();
     passwordController.dispose();
     super.dispose();
   }
 
   bool showProg = false;
 
+  // --- NO CHANGES TO THE LOGIC BELOW ---
   Future loginToSeedr(user, pass) async {
     var connected = await checkUserConnection();
 
@@ -61,8 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response.statusCode == 200) {
-        // If the server did return a 200 OK response,
-        // then parse the JSON.
         var d = jsonDecode(response.body);
         Get.snackbar("Login Success", "",
             backgroundColor: Colors.greenAccent, colorText: Colors.white);
@@ -80,8 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             true);
       } else {
-        // If the server did not return a 200 OK response,
-        // then throw an exception.
         var d = jsonDecode(response.body);
         Get.snackbar(d["error_description"], "Please Check The Form",
             backgroundColor: Colors.redAccent, colorText: Colors.white);
@@ -93,6 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
+  // --- NO CHANGES TO THE LOGIC ABOVE ---
 
   @override
   Widget build(BuildContext context) {
@@ -102,249 +100,256 @@ class _LoginScreenState extends State<LoginScreen> {
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF0F2F5), // Softer background color
         resizeToAvoidBottomInset: false,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth > 600) {
-              return _buildLargeScreen(size, simpleUIController);
-            } else {
-              return _buildSmallScreen(size, simpleUIController);
-            }
-          },
+        body: Stack(
+          children: [
+            // Decorative Blobs
+            Positioned(
+              top: size.height * -0.1,
+              left: size.width * -0.2,
+              child: _buildBlob(Colors.purple.shade200, 300),
+            ),
+            Positioned(
+              bottom: size.height * -0.15,
+              right: size.width * -0.25,
+              child: _buildBlob(Colors.teal.shade200, 400),
+            ),
+            // Blur Effect
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 80.0, sigmaY: 80.0),
+              child: Container(color: Colors.transparent),
+            ),
+            // Content
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 600) {
+                  return _buildLargeScreen(size, simpleUIController);
+                } else {
+                  return _buildSmallScreen(size, simpleUIController);
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Widget _buildBlob(Color color, double size) {
+    return Container(
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.4),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+
   /// For large screens
-  Widget _buildLargeScreen(
-    Size size,
-    SimpleUIController simpleUIController,
-  ) {
+  Widget _buildLargeScreen(Size size, SimpleUIController simpleUIController) {
     return Row(
       children: [
         Expanded(
-          flex: 4,
-          child: RotatedBox(
-            quarterTurns: 3,
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
             child: Image.asset(
-              'assets/img/logo/splash_logo.png',
-              height: size.height * 0.25,
-              width: double.infinity,
-              // fit: BoxFit.fill,
+              'assets/img/logo/splash_logo_new.png', // <-- Replaced Lottie with Image
+              height: size.height * 0.5,
             ),
           ),
         ),
-        SizedBox(width: size.width * 0.06),
         Expanded(
           flex: 5,
-          child: _buildMainBody(
-            size,
-            simpleUIController,
-          ),
+          child: _buildMainBody(size, simpleUIController),
         ),
       ],
     );
   }
 
   /// For Small screens
-  Widget _buildSmallScreen(
-    Size size,
-    SimpleUIController simpleUIController,
-  ) {
-    return Center(
-      child: _buildMainBody(
-        size,
-        simpleUIController,
-      ),
-    );
+  Widget _buildSmallScreen(Size size, SimpleUIController simpleUIController) {
+    return _buildMainBody(size, simpleUIController);
   }
 
   /// Main Body
-  Widget _buildMainBody(
-    Size size,
-    SimpleUIController simpleUIController,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment:
-          size.width > 600 ? MainAxisAlignment.center : MainAxisAlignment.start,
-      children: [
-        size.width > 600
-            ? Container()
-            : Center(
+  Widget _buildMainBody(Size size, SimpleUIController simpleUIController) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: size.width > 600 ? 60 : 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            if (size.width <= 600)
+              Center(
                 child: Image.asset(
-                  'assets/img/logo/splash_logo.png',
-                  height: 200,
+                  'assets/img/logo/splash_logo_new.png', // <-- Replaced Lottie with Image
+                  height: size.height * 0.25,
                 ),
               ),
-        Padding(
-          padding: const EdgeInsets.only(left: 20.0),
-          child: Text(
-            'Login To Torflix.',
-            style: kLoginTitleStyle(size),
-          ),
-        ),
-        const SizedBox(
-          height: 10,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 20.0),
-          child: Text(
-            'Welcome Back Catchy',
-            style: kLoginSubtitleStyle(size),
-          ),
-        ),
-        SizedBox(
-          height: size.height * 0.03,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 20.0, right: 20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                /// username or Gmail
-                TextFormField(
-                  style: kTextFormFieldStyle(),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.person),
+            const SizedBox(height: 20),
+            Text('Login To Torflix.', style: kLoginTitleStyle(size)),
+            const SizedBox(height: 10),
+            Text('Welcome Back Cachy', style: kLoginSubtitleStyle(size)),
+            SizedBox(height: size.height * 0.04),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  /// Username or Gmail
+                  _buildTextFormField(
+                    controller: nameController,
                     hintText: 'Username or Gmail',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(15)),
-                    ),
-                  ),
-                  controller: nameController,
-                  // The validator receives the text that the user has entered.
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter username';
-                    } else if (value.length < 4) {
-                      return 'at least enter 4 characters';
-                    } else if (value.length > 26) {
-                      return 'maximum character is 26';
-                    }
-                    return null;
-                  },
-                ),
-                // SizedBox(
-                //   height: size.height * 0.02,
-                // ),
-                // TextFormField(
-                //   controller: emailController,
-                //   decoration: const InputDecoration(
-                //     prefixIcon: Icon(Icons.email_rounded),
-                //     hintText: 'gmail',
-                //     border: OutlineInputBorder(
-                //       borderRadius: BorderRadius.all(Radius.circular(15)),
-                //     ),
-                //   ),
-                //   // The validator receives the text that the user has entered.
-                //   validator: (value) {
-                //     if (value == null || value.isEmpty) {
-                //       return 'Please enter gmail';
-                //     } else if (!value.endsWith('@gmail.com')) {
-                //       return 'please enter valid gmail';
-                //     }
-                //     return null;
-                //   },
-                // ),
-                SizedBox(
-                  height: size.height * 0.02,
-                ),
-
-                /// password
-                Obx(
-                  () => TextFormField(
-                    style: kTextFormFieldStyle(),
-                    controller: passwordController,
-                    obscureText: simpleUIController.isObscure.value,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.lock_open),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          simpleUIController.isObscure.value
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          simpleUIController.isObscureActive();
-                        },
-                      ),
-                      hintText: 'Password',
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(15)),
-                      ),
-                    ),
-                    // The validator receives the text that the user has entered.
+                    prefixIcon: Icons.person_outline_rounded,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter some text';
-                      } else if (value.length < 7) {
-                        return 'at least enter 6 characters';
-                      } else if (value.length > 30) {
-                        return 'maximum character is 30';
+                        return 'Please enter username';
+                      } else if (value.length < 4) {
+                        return 'at least enter 4 characters';
+                      } else if (value.length > 26) {
+                        return 'maximum character is 26';
                       }
                       return null;
                     },
                   ),
-                ),
+                  SizedBox(height: size.height * 0.02),
 
-                SizedBox(
-                  height: size.height * 0.02,
-                ),
+                  /// Password
+                  Obx(
+                    () => _buildTextFormField(
+                      controller: passwordController,
+                      hintText: 'Password',
+                      prefixIcon: Icons.lock_outline_rounded,
+                      obscureText: simpleUIController.isObscure.value,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          simpleUIController.isObscure.value
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: Colors.grey.shade600,
+                        ),
+                        onPressed: () => simpleUIController.isObscureActive(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter some text';
+                        } else if (value.length < 7) {
+                          return 'at least enter 6 characters';
+                        } else if (value.length > 30) {
+                          return 'maximum character is 30';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  SizedBox(height: size.height * 0.04),
 
-                /// Login Button
-                loginButton(),
-                SizedBox(
-                  height: size.height * 0.03,
-                ),
-
-                /// Navigate To Login Screen
-              ],
+                  /// Login Button
+                  _loginButton(),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData prefixIcon,
+    String? Function(String?)? validator,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      obscureText: obscureText,
+      style: const TextStyle(fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade500),
+        prefixIcon: Icon(prefixIcon, color: Colors.grey.shade600),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.7),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.deepPurple.shade300, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.red.shade300, width: 1.5),
+        ),
+      ),
     );
   }
 
   // Login Button
-  Widget loginButton() {
-    return SizedBox(
+  Widget _loginButton() {
+    return Container(
       width: double.infinity,
       height: 55,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        gradient: const LinearGradient(
+          colors: [Colors.deepPurple, Colors.teal],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          )
+        ],
+      ),
       child: ElevatedButton(
-        style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.all(Colors.deepPurpleAccent),
-          shape: MaterialStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
+        onPressed: showProg
+            ? null // Disable button when loading
+            : () {
+                if (_formKey.currentState!.validate()) {
+                  setState(() {
+                    showProg = true;
+                  });
+                  loginToSeedr(
+                      nameController.value.text, passwordController.value.text);
+                }
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
           ),
         ),
-        onPressed: () {
-          // Validate returns true if the form is valid, or false otherwise.
-          if (_formKey.currentState!.validate()) {
-            setState(() {
-              showProg = true;
-            });
-            // ... Login To your Home Page
-            loginToSeedr(
-                nameController.value.text, passwordController.value.text);
-          }
-        },
-        child: Row(
-          children: [
-            showProg
-                ? Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(),
-                  )
-                : SizedBox(),
-            const Text('Login'),
-          ],
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: showProg
+              ? const CircularProgressIndicator(
+                  key: ValueKey('progress'),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                )
+              : const Text(
+                  'Login',
+                  key: ValueKey('text'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ),
     );
