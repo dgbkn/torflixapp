@@ -1,39 +1,54 @@
 name: Flutter CI/CD
 
-on: workflow_dispatch
-#on:
-  #push:
-  #  branches:
-   #   - 'main'
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-java@v1
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
         with:
-          java-version: '12.x'
-      - uses: subosito/flutter-action@v1
+          distribution: 'zulu'
+          java-version: '12'
+
+      - uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
           flutter-version: '3.10.5'
+          channel: 'stable'
+
       - run: flutter pub get
+
       - run: flutter build apk --multidex
+
       - run: flutter build windows
-      
+
       - name: Extract mpv files
         run: 7z x mpc_paste_in_build.7z
-    
-      - name: Archive Release
+
+      - name: Rename APK for release
+        run: |
+          mkdir -p release-apk
+          cp build/app/outputs/flutter-apk/app-release.apk release-apk/TorFlix-${{ github.ref_name }}.apk
+
+      - name: Archive Windows Release
         uses: thedoctor0/zip-release@master
         with:
           type: 'zip'
-          filename: TorFlix-${{github.ref_name}}-windows.zip
+          filename: TorFlix-${{ github.ref_name }}-windows.zip
           directory: build/windows/runner/Release
-      - name: Push Release
+
+      - name: Push GitHub Release
         uses: ncipollo/release-action@v1
         with:
-         artifacts: "build/app/outputs/flutter-apk/*.apk,build/windows/runner/Release/TorFlix-${{github.ref_name}}-windows.zip"
-         #artifacts: "build/windows/runner/Release/TorFlix-${{github.ref_name}}-windows.zip"
-         token: ${{ secrets.TOKEN }}
-         tag: 1.0.${{github.run_number}}
+          artifacts: |
+            release-apk/TorFlix-${{ github.ref_name }}.apk,
+            build/windows/runner/Release/TorFlix-${{ github.ref_name }}-windows.zip
+          token: ${{ secrets.TOKEN }}
+          tag: 1.0.${{ github.run_number }}

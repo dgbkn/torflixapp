@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
@@ -10,9 +11,14 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart' as http;
-import 'package:seedr_app/constants.dart';
 import 'package:seedr_app/utils.dart';
+// import 'package:seedr_app/constants.dart'; // Assuming you have this
+// import 'package:seedr_app/utils.dart'; // Assuming you have this
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart'; // Add url_launcher to your pubspec.yaml
+
+// Ensure you have this line where you initialize Hive, or a similar setup
+var boxLogin = Hive.box("login_info");
 
 class SeedrFile {
   final String name;
@@ -29,14 +35,23 @@ class SeedrFile {
 
   factory SeedrFile.fromJson(Map<String, dynamic> json) {
     String name = json["name"] ?? "Untitled";
-    bool isVideo = name.endsWith(".mkv") ||
-        name.endsWith(".mp4") ||
-        name.endsWith(".avi") ||
-        name.endsWith(".mov") ||
-        name.endsWith(".wmv");
+    // More robust video format checking by checking a list of extensions
+    const videoExtensions = [
+      '.mkv',
+      '.mp4',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.webm'
+    ];
+    bool isVideo =
+        videoExtensions.any((ext) => name.toLowerCase().endsWith(ext));
+
     return SeedrFile(
       name: name,
-      folderFileId: json["folder_file_id"],
+      folderFileId:
+          int.tryParse(json["folder_file_id"]?.toString() ?? '0') ?? 0,
       isVideo: isVideo,
       size: int.tryParse(json["size"]?.toString() ?? '0') ?? 0,
     );
@@ -44,9 +59,9 @@ class SeedrFile {
 
   String get formattedSize {
     if (size <= 0) return "0 B";
-    const suffixes = ["B", "KB", "MB", "GB", "TB"];
-    var i = (size.abs() == 0) ? 0 : (size.abs().toString().length - 1) ~/ 3;
-    return '${(size / (1 << (i * 10))).toStringAsFixed(2)} ${suffixes[i]}';
+    const suffixes = ["B", "KB", "MB", "GB", "TB", "PB"];
+    var i = (log(size) / log(1024)).floor();
+    return '${(size / pow(1024, i)).toStringAsFixed(2)} ${suffixes[i]}';
   }
 }
 
@@ -86,6 +101,7 @@ class _AllFilesState extends State<AllFiles> {
       if (response.statusCode == 200) {
         final d = jsonDecode(response.body);
         await _boxLogin.put("token", d["access_token"]);
+        // Important: Refresh the UI after getting the new token
         setState(() {
           _filesFuture = _fetchFiles();
         });
@@ -109,15 +125,17 @@ class _AllFilesState extends State<AllFiles> {
     final folderResponse = await http
         .get(Uri.parse("https://www.seedr.cc/api/folder?access_token=$token"));
 
+    // If token is expired or invalid
     if (folderResponse.statusCode == 401) {
       await _refreshTokenAndRetry();
-      return [];
+      return []; // Return empty list, the retry will trigger a new fetch
     }
 
     if (folderResponse.statusCode == 200) {
       final List<SeedrFile> allFiles = [];
       final folderData = jsonDecode(folderResponse.body);
 
+      // Fetch files from each sub-folder
       for (final folder in folderData["folders"]) {
         final filesResponse = await http.get(Uri.parse(
             "https://www.seedr.cc/api/folder/${folder['id']}?access_token=$token"));
@@ -128,10 +146,11 @@ class _AllFilesState extends State<AllFiles> {
           }
         }
       }
+      // Sort files alphabetically for consistent display
       allFiles.sort((a, b) => a.name.compareTo(b.name));
       return allFiles;
     } else {
-      throw "Failed to load files. Please try again.";
+      throw "Failed to load files (Code: ${folderResponse.statusCode}). Please try again.";
     }
   }
 
@@ -139,7 +158,8 @@ class _AllFilesState extends State<AllFiles> {
     showLoading(context);
     try {
       final details = {
-        "func": qualityFunc, // 'play_video' for SD, 'fetch_file' for HD
+        "func":
+            qualityFunc, // 'play_video' for SD, 'fetch_file' for HD/Download
         "folder_file_id": fileId.toString(),
         "access_token": _boxLogin.get("token")
       };
@@ -155,52 +175,70 @@ class _AllFilesState extends State<AllFiles> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return qualityFunc == 'play_video' ? data["url_hls"] : data["url"];
+      } else {
+        throw "Failed to get link (Code: ${response.statusCode})";
       }
     } catch (e) {
-      Navigator.pop(context);
-      Get.snackbar("Error", "Could not generate stream link.",
-          backgroundColor: Colors.redAccent);
+      if (mounted) Navigator.pop(context);
+      Get.snackbar("Error", "Could not generate link: ${e.toString()}",
+          backgroundColor: Colors.redAccent, colorText: Colors.white);
     }
     return null;
   }
 
-  Future<void> _launchInPlayer(
-      String url, String title, String playerPackage) async {
+// 1. REPLACE THIS FUNCTION
+  Future<void> _launchInPlayer(String url, String title, String playerPackage,
+      String componentName) async {
     if (Platform.isAndroid) {
       final intent = AndroidIntent(
         action: 'action_view',
-        data: Uri.encodeFull(url),
+        data: url,
         type: 'video/*',
+        // By providing the package AND the explicit componentName, we prevent the app chooser.
         package: playerPackage,
+        componentName: componentName,
         arguments: {'title': title},
         flags: [
           Flag.FLAG_ACTIVITY_NEW_TASK,
-          Flag.FLAG_GRANT_READ_URI_PERMISSION
+          Flag.FLAG_GRANT_READ_URI_PERMISSION,
         ],
       );
       try {
         await intent.launch();
       } catch (e) {
-        Get.snackbar(
-          "Error",
-          "Could not launch player. Is it installed?",
-          backgroundColor: Colors.orangeAccent,
-        );
+        Get.snackbar("Player Not Found",
+            "Could not launch $playerPackage. Please ensure it is installed.",
+            backgroundColor: Colors.orangeAccent,
+            snackPosition: SnackPosition.BOTTOM);
       }
     }
   }
 
+// 2. REPLACE THIS FUNCTION
   void _showPlayerSelection(String url, String title) {
-    final players = {
-      'VLC': 'org.videolan.vlc',
-      'MX Player': 'com.mxtech.videoplayer.ad',
-      'nPlayer': 'com.qinxiandiqi.nplayer',
-      'MX Player Pro': 'com.mxtech.videoplayer.pro',
+    // We now store the package name and the specific activity (component) name.
+    final Map<String, Map<String, String>> players = {
+      'VLC': {
+        'package': 'org.videolan.vlc',
+        'activity': 'org.videolan.vlc.gui.video.VideoPlayerActivity',
+      },
+      'MX Player': {
+        'package': 'com.mxtech.videoplayer.ad',
+        'activity': 'com.mxtech.videoplayer.ad.ActivityScreen',
+      },
+      'MX Player Pro': {
+        'package': 'com.mxtech.videoplayer.pro',
+        'activity': 'com.mxtech.videoplayer.pro.ActivityScreen',
+      },
+      'nPlayer': {
+        'package': 'com.qinxiandiqi.nplayer',
+        'activity': 'com.synaptics.rc.player.PlayerActivity',
+      }
     };
 
     Get.bottomSheet(
       Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.only(
@@ -208,62 +246,51 @@ class _AllFilesState extends State<AllFiles> {
             topRight: Radius.circular(20),
           ),
         ),
-        child: Wrap(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text("Open with...",
-                  style: Theme.of(context).textTheme.titleLarge),
-            ),
-            ...players.entries.map((entry) {
-              return ListTile(
-                title: Text(entry.key),
-                onTap: () {
-                  Navigator.pop(context);
-                  _launchInPlayer(url, title, entry.value);
-                },
-              );
-            }).toList(),
-          ],
+        child: SafeArea(
+          child: Wrap(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Text("Open with...",
+                    style: Theme.of(context).textTheme.titleLarge),
+              ),
+              ...players.entries.map((entry) {
+                final String playerName = entry.key;
+                final String playerPackage = entry.value['package']!;
+                final String playerActivity = entry.value['activity']!;
+
+                return ListTile(
+                  title: Text(playerName),
+                  onTap: () {
+                    Navigator.pop(context); // Close the bottom sheet
+                    // Pass all required details to the launch function.
+                    _launchInPlayer(url, title, playerPackage, playerActivity);
+                  },
+                );
+              }).toList(),
+            ],
+          ),
         ),
       ),
+      isScrollControlled: true,
     );
   }
 
-  void _handlePlayAction(SeedrFile file) async {
-    String? selectedQuality = await Get.dialog<String>(
-      AlertDialog(
-        title: const Text("Select Quality"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text("Standard Definition (SD)"),
-              subtitle: const Text("Faster start, lower data usage"),
-              onTap: () => Navigator.pop(context, 'play_video'),
-            ),
-            ListTile(
-              title: const Text("High Definition (HD)"),
-              subtitle: const Text("Best quality, higher data usage"),
-              onTap: () => Navigator.pop(context, 'fetch_file'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (selectedQuality != null) {
-      final url = await _getStreamUrl(file.folderFileId, selectedQuality);
-      if (url != null) {
-        _showPlayerSelection(url, file.name);
-      }
+  Future<void> launchUrlinExternalBrowser(String url) async {
+    if (!await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    )) {
+      Get.snackbar("Error", "Could not launch URL. Please try again.");
     }
   }
 
   void _handleDownloadAction(SeedrFile file) async {
+    // Always use 'fetch_file' for downloading to get the direct file link
     final url = await _getStreamUrl(file.folderFileId, 'fetch_file');
     if (url != null) {
-      launchUrlinChrome(url);
+      launchUrlinExternalBrowser(url);
     }
   }
 
@@ -277,9 +304,11 @@ class _AllFilesState extends State<AllFiles> {
             icon: const Icon(Icons.refresh),
             tooltip: "Refresh",
             onPressed: () {
-              setState(() {
-                _filesFuture = _fetchFiles();
-              });
+              if (mounted) {
+                setState(() {
+                  _filesFuture = _fetchFiles();
+                });
+              }
             },
           ),
         ],
@@ -298,24 +327,33 @@ class _AllFilesState extends State<AllFiles> {
           }
 
           final files = snapshot.data!;
-          return ListView.builder(
-            padding:
-                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-            itemCount: files.length,
-            itemBuilder: (context, index) {
-              return _FileCard(
-                file: files[index],
-                onPlay: () => _handlePlayAction(files[index]),
-                onDownload: () => _handleDownloadAction(files[index]),
-                onOpenWith: (quality) async {
-                  final url =
-                      await _getStreamUrl(files[index].folderFileId, quality);
-                  if (url != null) {
-                    _showPlayerSelection(url, files[index].name);
-                  }
-                },
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              if (mounted) {
+                setState(() {
+                  _filesFuture = _fetchFiles();
+                });
+              }
             },
+            child: ListView.builder(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+              itemCount: files.length,
+              itemBuilder: (context, index) {
+                final file = files[index];
+                return _FileCard(
+                  file: file,
+                  onPlayRequest: (String qualityFunc) async {
+                    final url =
+                        await _getStreamUrl(file.folderFileId, qualityFunc);
+                    if (url != null) {
+                      _showPlayerSelection(url, file.name);
+                    }
+                  },
+                  onDownloadRequest: () => _handleDownloadAction(file),
+                );
+              },
+            ),
           );
         },
       ),
@@ -333,8 +371,11 @@ class _AllFilesState extends State<AllFiles> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(width: 48.0, height: 48.0, color: Colors.white),
-              const SizedBox(width: 16),
+              Container(
+                  width: 48.0,
+                  height: 48.0,
+                  color: Colors.white,
+                  margin: const EdgeInsets.only(right: 16)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,16 +447,14 @@ class _AllFilesState extends State<AllFiles> {
 
 class _FileCard extends StatelessWidget {
   final SeedrFile file;
-  final VoidCallback onPlay;
-  final VoidCallback onDownload;
-  final Function(String quality) onOpenWith;
+  final Function(String qualityFunc) onPlayRequest;
+  final VoidCallback onDownloadRequest;
 
   const _FileCard({
     Key? key,
     required this.file,
-    required this.onPlay,
-    required this.onDownload,
-    required this.onOpenWith,
+    required this.onPlayRequest,
+    required this.onDownloadRequest,
   }) : super(key: key);
 
   @override
@@ -448,21 +487,52 @@ class _FileCard extends StatelessWidget {
           ),
         ),
         trailing: file.isVideo
-            ? IconButton(
-                icon: const Icon(Icons.play_circle_outline_rounded),
-                onPressed: onPlay,
-                tooltip: "Play",
-                color: iconColor,
-                iconSize: 28,
+            // For video files, show a menu with play and download options
+            ? PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'download') {
+                    onDownloadRequest();
+                  } else {
+                    // Value is either 'play_video' (SD) or 'fetch_file' (HD)
+                    onPlayRequest(value);
+                  }
+                },
+                icon: const Icon(Icons.more_vert),
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'play_video', // This is the 'func' for SD stream
+                    child: ListTile(
+                      leading: Icon(Icons.sd_card_outlined),
+                      title: Text('Play SD'),
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'fetch_file', // This is the 'func' for HD stream
+                    child: ListTile(
+                      leading: Icon(Icons.hd_outlined),
+                      title: Text('Play HD'),
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem<String>(
+                    value: 'download',
+                    child: ListTile(
+                      leading: Icon(Icons.download_for_offline_outlined),
+                      title: Text('Download'),
+                    ),
+                  ),
+                ],
               )
+            // For non-video files, show a simple download button
             : IconButton(
                 icon: const Icon(Icons.download_for_offline_outlined),
-                onPressed: onDownload,
+                onPressed: onDownloadRequest,
                 tooltip: "Download",
                 color: iconColor,
                 iconSize: 28,
               ),
-        onTap: file.isVideo ? onPlay : onDownload,
+        // A direct tap on non-video files also triggers a download
+        onTap: file.isVideo ? null : onDownloadRequest,
       ),
     );
   }
