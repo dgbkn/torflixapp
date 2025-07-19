@@ -116,6 +116,21 @@ class _AllFilesState extends State<AllFiles> {
     }
   }
 
+// In class _AllFilesState
+
+  void _handleCopyLinkAction(SeedrFile file, String qualityFunc) async {
+    // For non-video files, qualityFunc will be 'fetch_file'
+    final url = await _getStreamUrl(file.folderFileId, qualityFunc);
+    if (url != null) {
+      await Clipboard.setData(ClipboardData(text: url));
+      Get.snackbar(
+          "Link Copied", "The file link has been copied to your clipboard.",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
   Future<List<SeedrFile>> _fetchFiles() async {
     if (await checkUserConnection() == false) {
       throw "No internet connection.";
@@ -351,6 +366,8 @@ class _AllFilesState extends State<AllFiles> {
                     }
                   },
                   onDownloadRequest: () => _handleDownloadAction(file),
+                  onCopyLinkRequest: (String qualityFunc) =>
+                      _handleCopyLinkAction(file, qualityFunc),
                 );
               },
             ),
@@ -449,12 +466,14 @@ class _FileCard extends StatelessWidget {
   final SeedrFile file;
   final Function(String qualityFunc) onPlayRequest;
   final VoidCallback onDownloadRequest;
+  final Function(String qualityFunc) onCopyLinkRequest;
 
   const _FileCard({
     Key? key,
     required this.file,
     required this.onPlayRequest,
     required this.onDownloadRequest,
+    required this.onCopyLinkRequest,
   }) : super(key: key);
 
   @override
@@ -486,52 +505,94 @@ class _FileCard extends StatelessWidget {
             style: TextStyle(color: Colors.grey[600]),
           ),
         ),
-        trailing: file.isVideo
-            // For video files, show a menu with play and download options
-            ? PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'download') {
-                    onDownloadRequest();
-                  } else {
-                    // Value is either 'play_video' (SD) or 'fetch_file' (HD)
-                    onPlayRequest(value);
-                  }
-                },
-                icon: const Icon(Icons.more_vert),
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
-                    value: 'play_video', // This is the 'func' for SD stream
-                    child: ListTile(
-                      leading: Icon(Icons.sd_card_outlined),
-                      title: Text('Play SD'),
-                    ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            switch (value) {
+              case 'play_sd':
+                onPlayRequest('play_video');
+                break;
+              case 'play_hd':
+                onPlayRequest('fetch_file');
+                break;
+              case 'download':
+                onDownloadRequest();
+                break;
+              case 'copy_sd':
+                onCopyLinkRequest('play_video');
+                break;
+              case 'copy_hd':
+                onCopyLinkRequest('fetch_file');
+                break;
+              case 'copy_link': // For non-video files
+                onCopyLinkRequest('fetch_file');
+                break;
+            }
+          },
+          icon: const Icon(Icons.more_vert),
+          itemBuilder: (BuildContext context) {
+            if (file.isVideo) {
+              // Menu for VIDEO files
+              return <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'play_sd',
+                  child: ListTile(
+                    leading: Icon(Icons.sd_card_outlined),
+                    title: Text('Play SD'),
                   ),
-                  const PopupMenuItem<String>(
-                    value: 'fetch_file', // This is the 'func' for HD stream
-                    child: ListTile(
-                      leading: Icon(Icons.hd_outlined),
-                      title: Text('Play HD'),
-                    ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'play_hd',
+                  child: ListTile(
+                    leading: Icon(Icons.hd_outlined),
+                    title: Text('Play HD'),
                   ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem<String>(
-                    value: 'download',
-                    child: ListTile(
-                      leading: Icon(Icons.download_for_offline_outlined),
-                      title: Text('Download'),
-                    ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'copy_sd',
+                  child: ListTile(
+                    leading: Icon(Icons.link),
+                    title: Text('Copy SD Link'),
                   ),
-                ],
-              )
-            // For non-video files, show a simple download button
-            : IconButton(
-                icon: const Icon(Icons.download_for_offline_outlined),
-                onPressed: onDownloadRequest,
-                tooltip: "Download",
-                color: iconColor,
-                iconSize: 28,
-              ),
-        // A direct tap on non-video files also triggers a download
+                ),
+                const PopupMenuItem<String>(
+                  value: 'copy_hd',
+                  child: ListTile(
+                    leading: Icon(Icons.link),
+                    title: Text('Copy HD Link'),
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'download',
+                  child: ListTile(
+                    leading: Icon(Icons.download_for_offline_outlined),
+                    title: Text('Download'),
+                  ),
+                ),
+              ];
+            } else {
+              // Menu for NON-VIDEO files
+              return <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'download',
+                  child: ListTile(
+                    leading: Icon(Icons.download_for_offline_outlined),
+                    title: Text('Download'),
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'copy_link',
+                  child: ListTile(
+                    leading: Icon(Icons.link),
+                    title: Text('Copy Link'),
+                  ),
+                ),
+              ];
+            }
+          },
+        ),
+        // A direct tap still triggers a download for non-video files for convenience
         onTap: file.isVideo ? null : onDownloadRequest,
       ),
     );

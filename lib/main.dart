@@ -14,18 +14,8 @@ import 'package:seedr_app/pages/HomePage.dart';
 import 'package:seedr_app/pages/LoginScreen.dart';
 import 'package:seedr_app/pages/SearchPage.dart';
 
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
-  }
-}
-
 void main() async {
   //dont even think to enable this.........
-  // HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
 
   const bool kIsWeb = identical(0, 0.0);

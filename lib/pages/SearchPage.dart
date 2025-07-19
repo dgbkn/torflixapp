@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +12,7 @@ import 'package:path/path.dart' as p;
 import 'package:seedr_app/pages/AddMagnet.dart';
 import 'package:seedr_app/pages/AllFiles.dart';
 import 'package:seedr_app/pages/LoginScreen.dart';
+import 'package:seedr_app/pages/TamilMvPage.dart';
 
 class TorrentResult {
   final String title;
@@ -322,7 +324,7 @@ class _SearchPageState extends State<SearchPage> {
     };
   }
 
-  Future<void> _addTorrent(TorrentResult torrent) async {
+  void _addTorrent(TorrentResult torrent) {
     String magnet = torrent.magnet;
     if (magnet.isNotEmpty) {
       Navigator.push(
@@ -330,9 +332,68 @@ class _SearchPageState extends State<SearchPage> {
         MaterialPageRoute(builder: (context) => AddMagnet(magnet: magnet)),
       );
     } else {
-      Get.snackbar("Info", "Magnet link not found directly.",
+      Get.snackbar("Info", "Magnet link not found for this item.",
           backgroundColor: Colors.orange, colorText: Colors.white);
     }
+  }
+
+  void _copyTorrent(TorrentResult torrent) {
+    if (torrent.magnet.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: torrent.magnet));
+      Get.snackbar("Copied", "Magnet link copied to clipboard.",
+          backgroundColor: Colors.green, colorText: Colors.white);
+    } else {
+      Get.snackbar("Info", "Magnet link not found for this item.",
+          backgroundColor: Colors.orange, colorText: Colors.white);
+    }
+  }
+
+  void _showManualAddDialog() {
+    final TextEditingController manualMagnetController =
+        TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add Magnet Manually"),
+          content: TextField(
+            controller: manualMagnetController,
+            decoration: const InputDecoration(
+              labelText: "Paste magnet link here",
+              hintText: "magnet:?xt=urn:btih:...",
+            ),
+            minLines: 2,
+            maxLines: 4,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: const Text("Add"),
+              onPressed: () {
+                final String magnetLink = manualMagnetController.text.trim();
+                if (magnetLink.startsWith("magnet:?")) {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => AddMagnet(magnet: magnetLink)),
+                  );
+                } else {
+                  Get.snackbar(
+                      "Invalid Link", "Please paste a valid magnet link.",
+                      backgroundColor: Colors.red, colorText: Colors.white);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -343,6 +404,12 @@ class _SearchPageState extends State<SearchPage> {
         appBar: AppBar(
           title: const Text('Search Torrents'),
           actions: [
+            ElevatedButton(
+                onPressed: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => TamilMvPage()));
+                },
+                child: const Text("TamilMV")),
             IconButton(
               icon: const Icon(Icons.folder_copy_outlined),
               tooltip: "My Files",
@@ -363,6 +430,11 @@ class _SearchPageState extends State<SearchPage> {
             _buildSearchBarAndFilter(),
             Expanded(child: _buildResultsBody()),
           ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showManualAddDialog,
+          tooltip: 'Add Magnet Manually',
+          child: const Icon(Icons.edit),
         ),
       ),
     );
@@ -512,7 +584,12 @@ class _SearchPageState extends State<SearchPage> {
                 _buildStatIcon(Icons.arrow_downward_rounded,
                     torrent.leechers.toString(), Colors.red.shade600),
                 const Spacer(),
-                const Icon(Icons.add_circle_outline, color: Colors.blue),
+                IconButton(
+                  icon: const Icon(Icons.copy_outlined),
+                  color: Colors.grey.shade600,
+                  tooltip: 'Copy Magnet Link',
+                  onPressed: () => _copyTorrent(torrent),
+                ),
               ],
             )
           ],

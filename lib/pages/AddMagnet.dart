@@ -51,7 +51,7 @@ class _AddMagnetState extends State<AddMagnet> {
   ];
 
   // Timeout for the polling mechanism to prevent infinite loops
-  static const int _pollingTimeoutSeconds = 60;
+  static const int _pollingTimeoutSeconds = 30;
 
   @override
   void initState() {
@@ -138,7 +138,55 @@ class _AddMagnetState extends State<AddMagnet> {
       if (errorIndex != -1) {
         _updateStep(errorIndex, StepStatus.error,
             message: e.toString().replaceAll("Exception: ", ""));
+        _handleFatalError(e.toString().replaceAll("Exception: ", ""));
       }
+    }
+  }
+
+// In class _AddMagnetState
+
+// REPLACED: This now uses a loop instead of recursion to be safer and clearer.
+  Future<void> _beginPollingLoop(int userTorrentId) async {
+    final startTime = DateTime.now();
+
+    while (mounted && _isProcessActive) {
+      // 1. Check for timeout at the beginning of each loop iteration.
+      // This will now be caught by the main try...catch block.
+      if (DateTime.now().difference(startTime).inSeconds >
+          _pollingTimeoutSeconds) {
+        _handleFatalError(
+            "Process timed out. The torrent could not be found or started.");
+      }
+
+      var folderContent = await _getFolderContentWithLoginRetry();
+
+      // 2. Check if the torrent is actively downloading.
+      var downloadingTorrent = folderContent["torrents"].firstWhere(
+          (t) => t["user_torrent_id"] == userTorrentId,
+          orElse: () => null);
+
+      if (downloadingTorrent != null) {
+        _loadProgress(downloadingTorrent["progress_url"]);
+        return; // Exit the loop, progress tracker will take over.
+      }
+
+      // 3. Check if the torrent has already finished (a folder was created).
+      var completedFolder = folderContent["folders"]
+          .firstWhere((f) => f["name"] == _torrentTitle, orElse: () => null);
+
+      if (completedFolder != null) {
+        setState(() {
+          _downloadProgress = 1.0;
+        });
+        _updateStep(3, StepStatus.success, message: "Download Complete!");
+        Timer(const Duration(seconds: 2), () {
+          if (mounted) changePageTo(context, AllFiles(), true);
+        });
+        return; // Exit the loop, success!
+      }
+
+      // 4. If not found, wait before the next iteration of the loop.
+      await Future.delayed(const Duration(seconds: 3));
     }
   }
 
@@ -180,8 +228,24 @@ class _AddMagnetState extends State<AddMagnet> {
     }
 
     // If not found, wait and poll again.
-    await Future.delayed(const Duration(seconds: 3));
-    _pollForCompletion(userTorrentId, startTime);
+    await Future.delayed(const Duration(seconds: 1));
+    // _pollForCompletion(userTorrentId, startTime);
+    _beginPollingLoop(userTorrentId);
+  }
+
+  void _handleFatalError(String errorMessage) {
+    if (!mounted) return;
+    // First, update the UI to show the error
+    _updateStep(3, StepStatus.error, message: errorMessage);
+    // Then, show a snackbar for immediate feedback
+    Get.snackbar("Process Failed", errorMessage,
+        backgroundColor: Colors.redAccent, colorText: Colors.white);
+    // Finally, pop the current page after a short delay to let the user see the message
+    Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
   }
 
   // Tracks progress once a download has been confirmed to be active.
@@ -190,18 +254,21 @@ class _AddMagnetState extends State<AddMagnet> {
 
     var response = await get(Uri.parse(progUrl));
     if (response.statusCode != 200) {
-      _updateStep(3, StepStatus.error,
-          message: "Lost connection to progress stream.");
+      _handleFatalError("Lost connection to progress stream.");
       return;
     }
 
     var progData = response.body.substring(2, response.body.length - 1);
     Map finalProg = jsonDecode(progData);
 
+    print(finalProg);
+
+    // **MODIFIED:** This block now instantly triggers the fatal error handler.
     if ((finalProg.containsKey("warnings") && finalProg["warnings"] != '[]') ||
-        finalProg["download_rate"] == 0) {
-      _updateStep(3, StepStatus.error,
-          message: "Torrent is stalled or invalid. Please try another one.");
+        (finalProg.containsKey("download_rate") &&
+            finalProg["download_rate"] == 0)) {
+      _handleFatalError(
+          "Torrent is stalled or invalid. Please try another one.");
       return;
     }
 
@@ -272,7 +339,7 @@ class _AddMagnetState extends State<AddMagnet> {
       if (mounted) {
         Get.snackbar("Login Expired", "Please log in again.",
             backgroundColor: Colors.red, colorText: Colors.white);
-        SystemNavigator.pop();
+        _handleFatalError("Login expired. Please log in again.");
       }
       throw Exception("Login expired.");
     }
