@@ -12,30 +12,42 @@ import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:seedr_app/utils.dart';
-// import 'package:seedr_app/constants.dart'; // Assuming you have this
-// import 'package:seedr_app/utils.dart'; // Assuming you have this
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher.dart'; // Add url_launcher to your pubspec.yaml
+import 'package:url_launcher/url_launcher.dart';
 
-// Ensure you have this line where you initialize Hive, or a similar setup
 var boxLogin = Hive.box("login_info");
 
-class SeedrFile {
+abstract class FileSystemItem {
   final String name;
-  final int folderFileId;
+  final int id;
+
+  FileSystemItem({required this.name, required this.id});
+}
+
+class SeedrFolder extends FileSystemItem {
+  SeedrFolder({required super.name, required super.id});
+
+  factory SeedrFolder.fromJson(Map<String, dynamic> json) {
+    return SeedrFolder(
+      name: json["name"] ?? "Untitled Folder",
+      id: json["id"] ?? 0,
+    );
+  }
+}
+
+class SeedrFile extends FileSystemItem {
   final bool isVideo;
   final int size;
 
   SeedrFile({
-    required this.name,
-    required this.folderFileId,
+    required super.name,
+    required super.id,
     required this.isVideo,
     required this.size,
   });
 
   factory SeedrFile.fromJson(Map<String, dynamic> json) {
     String name = json["name"] ?? "Untitled";
-    // More robust video format checking by checking a list of extensions
     const videoExtensions = [
       '.mkv',
       '.mp4',
@@ -50,8 +62,7 @@ class SeedrFile {
 
     return SeedrFile(
       name: name,
-      folderFileId:
-          int.tryParse(json["folder_file_id"]?.toString() ?? '0') ?? 0,
+      id: int.tryParse(json["folder_file_id"]?.toString() ?? '0') ?? 0,
       isVideo: isVideo,
       size: int.tryParse(json["size"]?.toString() ?? '0') ?? 0,
     );
@@ -73,16 +84,25 @@ class AllFiles extends StatefulWidget {
 }
 
 class _AllFilesState extends State<AllFiles> {
-  late Future<List<SeedrFile>> _filesFuture;
+  late Future<List<FileSystemItem>> _itemsFuture;
   final _boxLogin = Hive.box("login_info");
+  final List<Map<String, dynamic>> _navigationStack = [
+    {'id': 0, 'name': 'My Files'}
+  ];
 
   @override
   void initState() {
     super.initState();
-    _filesFuture = _fetchFiles();
+    _loadFolderContents(0);
   }
 
-  Future<void> _refreshTokenAndRetry() async {
+  void _loadFolderContents(int folderId) {
+    setState(() {
+      _itemsFuture = _fetchFolderContents(folderId);
+    });
+  }
+
+  Future<void> _refreshTokenAndRetry(int folderId) async {
     try {
       final details = {
         "grant_type": "password",
@@ -101,10 +121,7 @@ class _AllFilesState extends State<AllFiles> {
       if (response.statusCode == 200) {
         final d = jsonDecode(response.body);
         await _boxLogin.put("token", d["access_token"]);
-        // Important: Refresh the UI after getting the new token
-        setState(() {
-          _filesFuture = _fetchFiles();
-        });
+        _loadFolderContents(folderId);
       } else {
         throw "Login Expired. Please log in again.";
       }
@@ -116,11 +133,70 @@ class _AllFilesState extends State<AllFiles> {
     }
   }
 
-// In class _AllFilesState
+  Future<List<FileSystemItem>> _fetchFolderContents(int folderId) async {
+    if (await checkUserConnection() == false) {
+      throw "No internet connection.";
+    }
+
+    final token = _boxLogin.get('token');
+    final url = folderId == 0
+        ? "https://www.seedr.cc/api/folder?access_token=$token"
+        : "https://www.seedr.cc/api/folder/$folderId?access_token=$token";
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 401) {
+      await _refreshTokenAndRetry(folderId);
+      return [];
+    }
+
+    if (response.statusCode == 200) {
+      final List<FileSystemItem> items = [];
+      final data = jsonDecode(response.body);
+
+      for (final folderJson in data["folders"]) {
+        items.add(SeedrFolder.fromJson(folderJson));
+      }
+
+      for (final fileJson in data["files"]) {
+        items.add(SeedrFile.fromJson(fileJson));
+      }
+      items.sort((a, b) {
+        if (a is SeedrFolder && b is SeedrFile) {
+          return -1;
+        }
+        if (a is SeedrFile && b is SeedrFolder) {
+          return 1;
+        }
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+
+      return items;
+    } else {
+      throw "Failed to load files (Code: ${response.statusCode}). Please try again.";
+    }
+  }
+
+  void _navigateToFolder(int folderId, String name) {
+    setState(() {
+      _navigationStack.add({'id': folderId, 'name': name});
+    });
+    _loadFolderContents(folderId);
+  }
+
+  bool _handleBackButton() {
+    if (_navigationStack.length > 1) {
+      setState(() {
+        _navigationStack.removeLast();
+      });
+      _loadFolderContents(_navigationStack.last['id']);
+      return false;
+    }
+    return true;
+  }
 
   void _handleCopyLinkAction(SeedrFile file, String qualityFunc) async {
-    // For non-video files, qualityFunc will be 'fetch_file'
-    final url = await _getStreamUrl(file.folderFileId, qualityFunc);
+    final url = await _getStreamUrl(file.id, qualityFunc);
     if (url != null) {
       await Clipboard.setData(ClipboardData(text: url));
       Get.snackbar(
@@ -131,50 +207,11 @@ class _AllFilesState extends State<AllFiles> {
     }
   }
 
-  Future<List<SeedrFile>> _fetchFiles() async {
-    if (await checkUserConnection() == false) {
-      throw "No internet connection.";
-    }
-
-    final token = _boxLogin.get('token');
-    final folderResponse = await http
-        .get(Uri.parse("https://www.seedr.cc/api/folder?access_token=$token"));
-
-    // If token is expired or invalid
-    if (folderResponse.statusCode == 401) {
-      await _refreshTokenAndRetry();
-      return []; // Return empty list, the retry will trigger a new fetch
-    }
-
-    if (folderResponse.statusCode == 200) {
-      final List<SeedrFile> allFiles = [];
-      final folderData = jsonDecode(folderResponse.body);
-
-      // Fetch files from each sub-folder
-      for (final folder in folderData["folders"]) {
-        final filesResponse = await http.get(Uri.parse(
-            "https://www.seedr.cc/api/folder/${folder['id']}?access_token=$token"));
-        if (filesResponse.statusCode == 200) {
-          final filesData = jsonDecode(filesResponse.body);
-          for (final fileJson in filesData["files"]) {
-            allFiles.add(SeedrFile.fromJson(fileJson));
-          }
-        }
-      }
-      // Sort files alphabetically for consistent display
-      allFiles.sort((a, b) => a.name.compareTo(b.name));
-      return allFiles;
-    } else {
-      throw "Failed to load files (Code: ${folderResponse.statusCode}). Please try again.";
-    }
-  }
-
   Future<String?> _getStreamUrl(int fileId, String qualityFunc) async {
     showLoading(context);
     try {
       final details = {
-        "func":
-            qualityFunc, // 'play_video' for SD, 'fetch_file' for HD/Download
+        "func": qualityFunc,
         "folder_file_id": fileId.toString(),
         "access_token": _boxLogin.get("token")
       };
@@ -185,7 +222,7 @@ class _AllFilesState extends State<AllFiles> {
         body: details,
       );
 
-      Navigator.pop(context); // Dismiss loading dialog
+      Navigator.pop(context);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -201,7 +238,6 @@ class _AllFilesState extends State<AllFiles> {
     return null;
   }
 
-// 1. REPLACE THIS FUNCTION
   Future<void> _launchInPlayer(String url, String title, String playerPackage,
       String componentName) async {
     if (Platform.isAndroid) {
@@ -245,9 +281,7 @@ class _AllFilesState extends State<AllFiles> {
     }
   }
 
-// 2. REPLACE THIS FUNCTION
   void _showPlayerSelection(String url, String title) {
-    // We now store the package name and the specific activity (component) name.
     final Map<String, Map<String, String>> players = {
       'VLC': {
         'package': 'org.videolan.vlc',
@@ -294,8 +328,7 @@ class _AllFilesState extends State<AllFiles> {
                 return ListTile(
                   title: Text(playerName),
                   onTap: () {
-                    Navigator.pop(context); // Close the bottom sheet
-                    // Pass all required details to the launch function.
+                    Navigator.pop(context);
                     _launchInPlayer(url, title, playerPackage, playerActivity);
                   },
                 );
@@ -318,77 +351,102 @@ class _AllFilesState extends State<AllFiles> {
   }
 
   void _handleDownloadAction(SeedrFile file) async {
-    // Always use 'fetch_file' for downloading to get the direct file link
-    final url = await _getStreamUrl(file.folderFileId, 'fetch_file');
+    final url = await _getStreamUrl(file.id, 'fetch_file');
     if (url != null) {
       launchUrlinExternalBrowser(url);
     }
   }
 
+  void _handleDefaultPlayAction(SeedrFile file) async {
+    // Use 'fetch_file' for HD quality by default
+    final url = await _getStreamUrl(file.id, 'fetch_file');
+    if (url != null) {
+      // Hardcode VLC player details for direct launch
+      _launchInPlayer(
+        url,
+        file.name,
+        'org.videolan.vlc',
+        'org.videolan.vlc.gui.video.VideoPlayerActivity',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("My Files"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: "Refresh",
-            onPressed: () {
-              if (mounted) {
-                setState(() {
-                  _filesFuture = _fetchFiles();
-                });
-              }
-            },
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<SeedrFile>>(
-        future: _filesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingShimmer();
-          }
-          if (snapshot.hasError) {
-            return _buildErrorWidget(snapshot.error.toString());
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          final files = snapshot.data!;
-          return RefreshIndicator(
-            onRefresh: () async {
-              if (mounted) {
-                setState(() {
-                  _filesFuture = _fetchFiles();
-                });
-              }
-            },
-            child: ListView.builder(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-              itemCount: files.length,
-              itemBuilder: (context, index) {
-                final file = files[index];
-                return _FileCard(
-                  file: file,
-                  onPlayRequest: (String qualityFunc) async {
-                    final url =
-                        await _getStreamUrl(file.folderFileId, qualityFunc);
-                    if (url != null) {
-                      _showPlayerSelection(url, file.name);
-                    }
-                  },
-                  onDownloadRequest: () => _handleDownloadAction(file),
-                  onCopyLinkRequest: (String qualityFunc) =>
-                      _handleCopyLinkAction(file, qualityFunc),
-                );
+    return WillPopScope(
+      onWillPop: () async => _handleBackButton(),
+      child: Scaffold(
+        appBar: AppBar(
+          leading: _navigationStack.length > 1
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _handleBackButton,
+                  tooltip: "Back",
+                )
+              : null,
+          title: Text(_navigationStack.last['name']),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: "Refresh",
+              onPressed: () {
+                if (mounted) {
+                  _loadFolderContents(_navigationStack.last['id']);
+                }
               },
             ),
-          );
-        },
+          ],
+        ),
+        body: FutureBuilder<List<FileSystemItem>>(
+          future: _itemsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildLoadingShimmer();
+            }
+            if (snapshot.hasError) {
+              return _buildErrorWidget(snapshot.error.toString());
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return _buildEmptyState();
+            }
+
+            final items = snapshot.data!;
+            return RefreshIndicator(
+              onRefresh: () async =>
+                  _loadFolderContents(_navigationStack.last['id']),
+              child: ListView.builder(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  if (item is SeedrFolder) {
+                    return _FolderCard(
+                      folder: item,
+                      onTap: () => _navigateToFolder(item.id, item.name),
+                    );
+                  } else if (item is SeedrFile) {
+                    return _FileCard(
+                      file: item,
+                      onDefaultPlayRequest: () =>
+                          _handleDefaultPlayAction(item),
+                      onPlayRequest: (String qualityFunc) async {
+                        final url = await _getStreamUrl(item.id, qualityFunc);
+                        if (url != null) {
+                          _showPlayerSelection(url, item.name);
+                        }
+                      },
+                      onDownloadRequest: () => _handleDownloadAction(item),
+                      onCopyLinkRequest: (String qualityFunc) =>
+                          _handleCopyLinkAction(item, qualityFunc),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -449,9 +507,7 @@ class _AllFilesState extends State<AllFiles> {
               icon: const Icon(Icons.refresh),
               label: const Text("Retry"),
               onPressed: () {
-                setState(() {
-                  _filesFuture = _fetchFiles();
-                });
+                _loadFolderContents(_navigationStack.last['id']);
               },
             ),
           ],
@@ -467,10 +523,10 @@ class _AllFilesState extends State<AllFiles> {
         children: [
           const Icon(Icons.folder_off_outlined, size: 80, color: Colors.grey),
           const SizedBox(height: 20),
-          Text("No files found",
+          Text("Folder is empty",
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          Text("Add some torrents to get started!",
+          Text("This folder has no files or subfolders.",
               style: TextStyle(color: Colors.grey[600])),
         ],
       ),
@@ -478,8 +534,45 @@ class _AllFilesState extends State<AllFiles> {
   }
 }
 
+class _FolderCard extends StatelessWidget {
+  final SeedrFolder folder;
+  final VoidCallback onTap;
+
+  const _FolderCard({
+    Key? key,
+    required this.folder,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2.0,
+      margin: const EdgeInsets.symmetric(vertical: 6.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        leading: Icon(
+          Icons.folder_rounded,
+          color: Theme.of(context).colorScheme.primary,
+          size: 40,
+        ),
+        title: Text(
+          folder.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 class _FileCard extends StatelessWidget {
   final SeedrFile file;
+  final VoidCallback onDefaultPlayRequest;
   final Function(String qualityFunc) onPlayRequest;
   final VoidCallback onDownloadRequest;
   final Function(String qualityFunc) onCopyLinkRequest;
@@ -487,6 +580,7 @@ class _FileCard extends StatelessWidget {
   const _FileCard({
     Key? key,
     required this.file,
+    required this.onDefaultPlayRequest,
     required this.onPlayRequest,
     required this.onDownloadRequest,
     required this.onCopyLinkRequest,
@@ -539,7 +633,7 @@ class _FileCard extends StatelessWidget {
               case 'copy_hd':
                 onCopyLinkRequest('fetch_file');
                 break;
-              case 'copy_link': // For non-video files
+              case 'copy_link':
                 onCopyLinkRequest('fetch_file');
                 break;
             }
@@ -547,7 +641,6 @@ class _FileCard extends StatelessWidget {
           icon: const Icon(Icons.more_vert),
           itemBuilder: (BuildContext context) {
             if (file.isVideo) {
-              // Menu for VIDEO files
               return <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
                   value: 'play_sd',
@@ -588,7 +681,6 @@ class _FileCard extends StatelessWidget {
                 ),
               ];
             } else {
-              // Menu for NON-VIDEO files
               return <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
                   value: 'download',
@@ -608,8 +700,7 @@ class _FileCard extends StatelessWidget {
             }
           },
         ),
-        // A direct tap still triggers a download for non-video files for convenience
-        onTap: file.isVideo ? null : onDownloadRequest,
+        onTap: file.isVideo ? onDefaultPlayRequest : onDownloadRequest,
       ),
     );
   }

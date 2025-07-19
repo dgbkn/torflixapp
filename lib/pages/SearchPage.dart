@@ -244,8 +244,10 @@ class _SearchPageState extends State<SearchPage> {
         }
       }
       if (imdbId != null) {
-        final torrentioRes = await http.get(Uri.parse(
-            'https://torrentio.strem.fun/sort=seeders/stream/movie/$imdbId.json'));
+        final torrentioRes = await http.get(
+          Uri.parse(
+              'https://torrentio.strem.fun/sort=seeders/stream/movie/$imdbId.json'),
+        );
         if (torrentioRes.statusCode == 200) {
           final data = json.decode(torrentioRes.body);
           if (data['streams'] != null) {
