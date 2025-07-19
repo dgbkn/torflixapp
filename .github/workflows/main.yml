@@ -43,7 +43,7 @@ jobs:
         with:
           type: 'zip'
           filename: TorFlix-${{ github.ref_name }}-windows.zip
-          directory: build/windows/runner/Release
+          directory: build/windows/x64/runner/Release
 
       - name: Push GitHub Release
         uses: ncipollo/release-action@v1
