@@ -122,7 +122,7 @@ class _AddMagnetState extends State<AddMagnet> {
         throw Exception(error);
       }
 
-      final int userTorrentId = addResult["user_torrent_id"];
+      final userTorrentId = addResult["torrent_hash"];
       setState(() {
         _torrentTitle = addResult["title"] ?? "Untitled Torrent";
       });
@@ -143,69 +143,25 @@ class _AddMagnetState extends State<AddMagnet> {
     }
   }
 
-// In class _AddMagnetState
-
-// REPLACED: This now uses a loop instead of recursion to be safer and clearer.
-  Future<void> _beginPollingLoop(int userTorrentId) async {
-    final startTime = DateTime.now();
-
-    while (mounted && _isProcessActive) {
-      // 1. Check for timeout at the beginning of each loop iteration.
-      // This will now be caught by the main try...catch block.
-      if (DateTime.now().difference(startTime).inSeconds >
-          _pollingTimeoutSeconds) {
-        _handleFatalError(
-            "Process timed out. The torrent could not be found or started.");
-      }
-
-      var folderContent = await _getFolderContentWithLoginRetry();
-
-      // 2. Check if the torrent is actively downloading.
-      var downloadingTorrent = folderContent["torrents"].firstWhere(
-          (t) => t["user_torrent_id"] == userTorrentId,
-          orElse: () => null);
-
-      if (downloadingTorrent != null) {
-        _loadProgress(downloadingTorrent["progress_url"]);
-        return; // Exit the loop, progress tracker will take over.
-      }
-
-      // 3. Check if the torrent has already finished (a folder was created).
-      var completedFolder = folderContent["folders"]
-          .firstWhere((f) => f["name"] == _torrentTitle, orElse: () => null);
-
-      if (completedFolder != null) {
-        setState(() {
-          _downloadProgress = 1.0;
-        });
-        _updateStep(3, StepStatus.success, message: "Download Complete!");
-        Timer(const Duration(seconds: 2), () {
-          if (mounted) changePageTo(context, AllFiles(), true);
-        });
-        return; // Exit the loop, success!
-      }
-
-      // 4. If not found, wait before the next iteration of the loop.
-      await Future.delayed(const Duration(seconds: 3));
-    }
-  }
-
   // Intelligent poller to handle both fast and slow downloads.
-  Future<void> _pollForCompletion(int userTorrentId, DateTime startTime) async {
+  Future<void> _pollForCompletion(var userTorrentId, DateTime startTime) async {
     if (!mounted || !_isProcessActive) return;
 
     if (DateTime.now().difference(startTime).inSeconds >
         _pollingTimeoutSeconds) {
-      throw Exception(
+      _handleFatalError(
           "Process timed out. The torrent could not be found or started.");
     }
 
     var folderContent = await _getFolderContentWithLoginRetry();
 
+    print(folderContent);
+
     // Check 1: Is the torrent actively downloading?
-    var downloadingTorrent = folderContent["torrents"].firstWhere(
-        (t) => t["user_torrent_id"] == userTorrentId,
-        orElse: () => null);
+    var downloadingTorrent = folderContent["torrents"]
+        .firstWhere((t) => t["hash"] == userTorrentId, orElse: () => null);
+
+    print(downloadingTorrent);
 
     if (downloadingTorrent != null) {
       _loadProgress(downloadingTorrent["progress_url"]);
@@ -229,8 +185,8 @@ class _AddMagnetState extends State<AddMagnet> {
 
     // If not found, wait and poll again.
     await Future.delayed(const Duration(seconds: 1));
-    // _pollForCompletion(userTorrentId, startTime);
-    _beginPollingLoop(userTorrentId);
+    _pollForCompletion(userTorrentId, startTime);
+    // _beginPollingLoop(userTorrentId);
   }
 
   void _handleFatalError(String errorMessage) {
@@ -264,9 +220,7 @@ class _AddMagnetState extends State<AddMagnet> {
     print(finalProg);
 
     // **MODIFIED:** This block now instantly triggers the fatal error handler.
-    if ((finalProg.containsKey("warnings") && finalProg["warnings"] != '[]') ||
-        (finalProg.containsKey("download_rate") &&
-            finalProg["download_rate"] == 0)) {
+    if ((finalProg.containsKey("warnings") && finalProg["warnings"] != '[]')) {
       _handleFatalError(
           "Torrent is stalled or invalid. Please try another one.");
       return;
